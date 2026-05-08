@@ -1,0 +1,241 @@
+---
+// Misinformation Agent — MANIT Bhopal research project. Engineer's-blog template.
+//
+// TODO (Akshat, verify):
+//   - Whether this Misinformation Agent is the same project as the
+//     IEEE traffic-sign paper, or a separate research effort during MANIT.
+//     I've written it as a separate agentic-NLP project given your
+//     supporting-work tag is "#transformers #pytorch #transferlearning".
+//   - Source URL — paste when ready.
+//   - Specific transformer model used (BERT? DistilBERT? RoBERTa?).
+//   - The IEEE publication link (if relevant) — your resume has it.
+//
+// Image slots: hero-banner.png, feature-pipeline.png, feature-evaluation.png
+
+import "../../styles/case-study-blog.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "pink";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "Transfer learning over training from scratch",
+    body: "I built on top of pre-trained transformer models rather than training from zero. Given the compute and data we had access to, fine-tuning a strong pre-trained backbone was the only path to a model that could realistically generalize beyond the training set — and even that took careful evaluation.",
+    img: "/images/projects/misinformation-agent/feature-pipeline.png",
+  },
+  {
+    num: "02",
+    title: "Agentic loop over single-shot classification",
+    body: "Misinformation isn't always a binary classification problem — context matters, source matters, the same statement can be true in one frame and misleading in another. The agent loop lets the model gather context, weigh evidence, and abstain when unsure, instead of forcing a confident wrong answer.",
+    img: "/images/projects/misinformation-agent/feature-evaluation.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "PyTorch + HuggingFace, not from-scratch implementations",
+    reason: "Research-grade transformers in PyTorch via HuggingFace meant I could iterate on model choices and fine-tuning strategies without burning weeks on plumbing. The interesting research questions were about data, evaluation, and the agent loop — not whether the attention mechanism was correct.",
+    cost: "Slightly less control over the lowest-level model behavior. Acceptable for a project where the contribution was at the agent / evaluation layer.",
+  },
+  {
+    decision: "Honest evaluation, including hard negatives and ambiguous cases",
+    reason: "Misinformation classifiers are easy to make look good on clean test sets and useless in the wild. I built an evaluation suite that included adversarial examples, ambiguous statements, and out-of-distribution sources. The numbers were lower — and more honest.",
+    cost: "Less impressive headline accuracy. Worth it: a model that abstains correctly is more valuable than one that's confidently wrong.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Research code is different from production code, on purpose",
+    body: "Reproducibility, structured experiments, and disciplined evaluation matter more in research than tidy abstractions or clean APIs. I had to unlearn some software-engineering instincts and re-learn ones suited to a research workflow.",
+  },
+  {
+    title: "Negative results are real results",
+    body: "Multiple model architectures and prompting strategies didn't beat the baseline. Documenting why they failed turned out to be as useful as documenting what worked — partly because it stops the next person on the project from re-running the same experiments.",
+  },
+  {
+    title: "Working with transformers up close demystifies them",
+    body: "Reading papers gave me one mental model of transformers. Fine-tuning them, watching loss curves, debugging tokenization issues, and evaluating on adversarial sets gave me a much sharper one.",
+  },
+];
+---
+
+<BaseLayout
+  title="Misinformation Agent — Akshat Darshi"
+  description="Agentic NLP research project at MANIT Bhopal. Transfer learning over pre-trained transformers; agent loop with abstention. Honest evaluation across hard negatives and ambiguous cases."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <div class="csb-root" data-theme="pink">
+        <section class="csb-hero rounded-[24px] overflow-hidden h-[280px] mb-8">
+          <img src="/images/projects/misinformation-agent/hero-banner.png" alt="Misinformation Agent — agentic NLP research" loading="eager" class="block w-full h-full object-cover object-center" />
+        </section>
+
+        <section class="flex flex-col gap-3 mb-8">
+          <div class="flex items-center gap-2">
+            <Tag>Research</Tag>
+            <Tag>Agentic NLP</Tag>
+          </div>
+          <h1 class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]">
+            Misinformation Agent &mdash; agentic NLP at MANIT
+          </h1>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed">
+            Research project at <span class="csb-emph">MANIT Bhopal</span> exploring agentic NLP
+            for misinformation analysis. Built around <span class="csb-emph">transfer learning</span>
+            over pre-trained transformers, with an agent loop that gathers context, weighs evidence,
+            and abstains when it shouldn&rsquo;t commit.
+          </p>
+          <div class="flex items-center gap-3 flex-wrap mt-2">
+            {/* TODO (Akshat): paste source URL when ready */}
+            <Button href="#" variant="outline" target="_blank">Source <span aria-hidden="true">→</span></Button>
+            {/* TODO (Akshat): if the IEEE paper is related, link it here too */}
+          </div>
+        </section>
+
+        <section class="csb-meta-grid grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 rounded-[12px] mb-8" data-cursor-bg="pink">
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">ML Research Intern<br />Sole researcher</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">Python<br />PyTorch<br />HuggingFace Transformers<br />Transfer learning</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Org</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">MANIT Bhopal<br />Research lab</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Timeline</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">Jun 2024 &ndash; Aug 2024<br />(internship)</p></div>
+        </section>
+
+        <section id="context" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Context</p>
+          <h2 class="csb-section-heading">One summer, one research lab, and the part of misinformation detection nobody wants to talk about.</h2>
+          <p class="csb-section-body">
+            I joined MANIT Bhopal&rsquo;s research lab for the summer with a clear brief &mdash;
+            explore agentic NLP approaches to misinformation analysis. The space is crowded with
+            single-shot classifiers chasing dataset leaderboards, and most papers quietly skip the
+            hard part. The interesting open questions are about the ambiguous cases &mdash; the
+            ones a binary classifier can&rsquo;t honestly answer. That&rsquo;s where I focused.
+          </p>
+        </section>
+
+        <section id="problem" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">The problem</p>
+          <h2 class="csb-section-heading">Most misinformation classifiers are confidently wrong on the cases that matter.</h2>
+          <p class="csb-section-body">
+            The hard part of misinformation detection isn&rsquo;t the obvious cases &mdash;
+            it&rsquo;s the ambiguous ones, the contextual ones, the ones where a single-shot
+            classifier picks a side and fails silently. A short list of what an agentic approach
+            had to handle:
+          </p>
+          <ul class="csb-list">
+            <li>Statements that are true in one frame and misleading in another</li>
+            <li>Out-of-distribution sources the model has no calibration for</li>
+            <li>Adversarial paraphrases of training-set examples</li>
+            <li>The need to abstain rather than commit to a wrong answer</li>
+          </ul>
+        </section>
+
+        <section id="architecture" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Architecture</p>
+          <h2 class="csb-section-heading">Pre-trained transformer + agent loop + honest eval suite.</h2>
+
+          <pre class="csb-arch-ascii" aria-label="Pipeline">{`
+   [Statement + context]
+            │
+            ▼
+   ┌─────────────────────────────────┐
+   │  Pre-trained transformer        │
+   │  (fine-tuned via transfer       │
+   │   learning on misinfo dataset)  │
+   └────────────┬────────────────────┘
+                ▼
+   ┌─────────────────────────────────┐
+   │       Agent loop                │
+   │   gather context → weigh →      │
+   │   classify OR abstain           │
+   └────────────┬────────────────────┘
+                ▼
+   ┌─────────────────────────────────┐
+   │  Honest eval suite              │
+   │  (hard negatives, ambiguous,    │
+   │   OOD sources, adversarials)    │
+   └─────────────────────────────────┘
+`}</pre>
+        </section>
+
+        <section id="implementation" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Implementation</p>
+          <h2 class="csb-section-heading">Two ideas that shaped the project.</h2>
+          <div class="flex flex-col gap-8 mt-4">
+            {highlights.map((h) => (
+              <div class="csb-highlight">
+                <div class="csb-highlight-img-wrap"><img src={h.img} alt={h.title} loading="lazy" class="csb-highlight-img" /></div>
+                <div class="csb-highlight-details">
+                  <div class="flex flex-col gap-1.5"><Tag>{h.num}</Tag><span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">{h.title}</span></div>
+                  <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug">{h.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="tradeoffs" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Tradeoffs</p>
+          <h2 class="csb-section-heading">Research decisions, made deliberately.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {tradeoffs.map((t) => (
+              <article class="csb-tradeoff">
+                <h3 class="csb-tradeoff-title">{t.decision}</h3>
+                <p class="csb-tradeoff-reason"><span class="csb-tradeoff-tag csb-tradeoff-tag--why">Why</span>{t.reason}</p>
+                <p class="csb-tradeoff-cost"><span class="csb-tradeoff-tag csb-tradeoff-tag--cost">Cost</span>{t.cost}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="reflection" data-cs-section class="csb-section flex flex-col gap-2">
+          <p class="csb-section-label">Reflection</p>
+          <h2 class="csb-section-heading">What MANIT taught me.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {reflections.map((r) => (
+              <article class="csb-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+                <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]">{r.title}</h3>
+                <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">{r.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<script>
+  function initCsb() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".csb-section"));
+    if (sections.length === 0) return;
+    if (reduced || !("IntersectionObserver" in window)) { sections.forEach((s) => s.setAttribute("data-visible", "")); return; }
+    const io = new IntersectionObserver((entries) => { for (const e of entries) { if (e.isIntersecting) { (e.target as HTMLElement).setAttribute("data-visible", ""); io.unobserve(e.target); } } }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    sections.forEach((s) => io.observe(s));
+  }
+  initCsb();
+  document.addEventListener("astro:page-load", initCsb);
+</script>

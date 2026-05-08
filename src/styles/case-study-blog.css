@@ -1,0 +1,313 @@
+/*
+  Engineer's-blog case-study shared tokens.
+
+  Each /work/<project>.astro page wraps its <main> contents in
+    <div class="csb-root" data-theme="pink|teal|green|orange">
+  and these classes pick up the right accent color via the cascade.
+
+  Variables resolved by data-theme:
+    --csb-accent       — strong accent (callouts, headings, highlights)
+    --csb-accent-soft  — soft tint for backgrounds, borders, hover states
+*/
+
+.csb-root {
+  --csb-accent: var(--color-pink);
+  --csb-accent-soft: var(--color-pink-2);
+}
+.csb-root[data-theme="green"]  { --csb-accent: var(--color-green);  --csb-accent-soft: var(--color-green-2); }
+.csb-root[data-theme="teal"]   { --csb-accent: var(--color-teal);   --csb-accent-soft: var(--color-teal-3); }
+.csb-root[data-theme="orange"] { --csb-accent: var(--color-orange); --csb-accent-soft: var(--color-orange-2); }
+.csb-root[data-theme="pink"]   { --csb-accent: var(--color-pink);   --csb-accent-soft: var(--color-pink-2); }
+.csb-root[data-theme="neutral"]{ --csb-accent: var(--color-fg-neutral); --csb-accent-soft: var(--color-bg-neutral-2); }
+
+/* === Section typography (matches existing cs-* tokens) === */
+.csb-section-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--color-ink-dim);
+  letter-spacing: 0.05em;
+}
+.csb-section-heading {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 22px;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+@media (min-width: 640px) { .csb-section-heading { font-size: 26px; } }
+@media (min-width: 768px) { .csb-section-heading { font-size: 28px; line-height: 1.15; } }
+.csb-section-body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-ink);
+  line-height: 1.55;
+}
+
+.csb-section {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 400ms var(--ease-out-soft), transform 400ms var(--ease-out-soft);
+}
+.csb-section[data-visible] { opacity: 1; transform: translateY(0); }
+
+.csb-hero { box-shadow: 0 14px 38px -22px rgba(36, 36, 36, 0.35); }
+
+/* Underline-on-hover emphasis */
+.csb-emph {
+  color: var(--color-ink);
+  background-image: linear-gradient(to right, var(--csb-accent-soft), var(--csb-accent-soft));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 6px;
+  padding-bottom: 1px;
+  transition: background-size var(--duration-base) var(--ease-out-soft);
+}
+.csb-emph:hover { background-size: 100% 6px; }
+
+/* === Metrics strip === */
+.csb-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--csb-accent) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--csb-accent) 35%, transparent);
+}
+.csb-metric-value {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--color-ink);
+}
+@media (min-width: 640px) { .csb-metric-value { font-size: 36px; } }
+.csb-metric-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-dim);
+}
+
+/* === Meta grid (Role / Stack / Timeline / Status) === */
+.csb-meta-grid {
+  background: var(--csb-accent);
+}
+
+/* === Bulleted problem / architecture list === */
+.csb-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.csb-list li {
+  position: relative;
+  padding-left: 18px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-ink);
+}
+.csb-list li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--csb-accent);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.csb-list code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-bg-neutral);
+  color: var(--color-ink);
+}
+
+/* === Problem-statement callout (filled with accent) === */
+.csb-callout {
+  background: var(--csb-accent);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.csb-callout-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--color-bg);
+}
+.csb-callout-text {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 20px;
+  color: var(--color-bg);
+  text-align: center;
+  max-width: 760px;
+  line-height: 1.3;
+}
+
+/* === ASCII architecture block === */
+.csb-arch-ascii {
+  margin-top: 12px;
+  padding: 16px 20px;
+  background: var(--color-ink);
+  color: var(--color-bg-light);
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre;
+  box-shadow: 0 8px 24px -12px rgba(36, 36, 36, 0.35);
+}
+@media (min-width: 768px) { .csb-arch-ascii { font-size: 12.5px; } }
+
+/* === Implementation highlight rows (image + details) === */
+.csb-highlight {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+.csb-highlight-img-wrap {
+  flex-shrink: 0;
+  width: 65%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-light);
+  box-shadow: 0 8px 24px -12px rgba(36, 36, 36, 0.18);
+}
+.csb-highlight-img { display: block; width: 100%; height: auto; object-fit: cover; }
+.csb-highlight-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .csb-highlight { flex-direction: column; }
+  .csb-highlight-img-wrap { width: 100%; }
+}
+
+/* === Tradeoff cards === */
+.csb-tradeoff {
+  background: var(--color-bg-light);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid color-mix(in oklab, var(--color-ink) 6%, transparent);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+.csb-tradeoff:hover { transform: translateY(-2px); }
+.csb-tradeoff-title {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 18px;
+  color: var(--color-ink);
+  line-height: 1.25;
+}
+.csb-tradeoff-reason,
+.csb-tradeoff-cost {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-ink-dim);
+  margin: 0;
+}
+.csb-tradeoff-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.csb-tradeoff-tag--why {
+  background: color-mix(in oklab, var(--csb-accent) 25%, transparent);
+  color: var(--color-ink);
+}
+.csb-tradeoff-tag--cost {
+  background: color-mix(in oklab, var(--color-orange) 25%, transparent);
+  color: var(--color-ink);
+}
+
+/* === Result tiles === */
+.csb-result-tile {
+  background: var(--color-bg-light);
+  border-radius: 16px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.csb-result-value {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--color-ink);
+}
+.csb-result-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--csb-accent);
+}
+.csb-result-detail {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-ink-dim);
+  margin-top: 4px;
+}
+
+.csb-results-image-wrap {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 42px -24px rgba(36, 36, 36, 0.35);
+}
+.csb-results-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--color-bg-light);
+}
+
+/* === Reflection tiles (mirror existing cs-reflection-tile) === */
+.csb-reflection-tile {
+  transition: transform var(--duration-base) var(--ease-out-soft), background var(--duration-base) var(--ease-out-soft);
+}
+.csb-reflection-tile:hover {
+  transform: translateY(-2px);
+  background: var(--color-bg-neutral);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csb-section,
+  .csb-emph,
+  .csb-tradeoff,
+  .csb-reflection-tile {
+    transition: none !important;
+    animation: none !important;
+  }
+  .csb-section { opacity: 1; transform: none; }
+  .csb-tradeoff:hover,
+  .csb-reflection-tile:hover { transform: none; }
+}

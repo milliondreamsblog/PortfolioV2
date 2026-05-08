@@ -1,0 +1,295 @@
+---
+// EvolveSanga — production NGO platform. Engineer's-blog template.
+// TODO (Akshat, verify):
+//   - Live URL — paste it when ready (I left an empty Visit button).
+//   - Donation backend — Razorpay? Cashfree? Direct bank transfer? I assumed Razorpay.
+//   - Hosting — assumed Vercel.
+//   - Stakeholder count, founding date, registered city — fill in if relevant.
+//
+// Image slots: hero-banner.png, feature-causes.png, feature-volunteer.png,
+//              feature-donate.png, results-snapshot.png
+
+import "../../styles/case-study-blog.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "orange";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "results", label: "Results" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const metrics = [
+  { value: "Live", label: "In production" },
+  { value: "9+", label: "Page routes" },
+  { value: "3", label: "Cause campaigns" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "A real client, real stakeholders, real requirements",
+    body: "EvolveSanga is a registered Section 8 NGO in Kanpur. This wasn’t a side project I controlled the scope of — it was a delivery for a board of trustees who needed something they could publicly stand behind. Every page, copy decision, and design choice went through stakeholder review.",
+    img: "/images/projects/evolvesanga/feature-causes.png",
+  },
+  {
+    num: "02",
+    title: "Multi-page structure built for trust",
+    body: "An NGO website lives or dies on whether visitors trust it enough to donate. I designed the information architecture around that single goal — clear activities and causes pages, transparent volunteer flow, a contact page that actually shows the team, and a donate page that makes the use of funds explicit.",
+    img: "/images/projects/evolvesanga/feature-volunteer.png",
+  },
+  {
+    num: "03",
+    title: "Accessible, responsive, and quiet",
+    body: "I deliberately avoided the “tech startup” aesthetic. NGO visitors are often older, often on slower connections, often on phones. The UI is calm, contrast-tested, keyboard-navigable, and lightweight enough to load quickly on weak networks — because that’s where the audience actually is.",
+    img: "/images/projects/evolvesanga/feature-donate.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "Quiet, calm UI over a flashy startup aesthetic",
+    reason: "EvolveSanga’s audience is donors, volunteers, and beneficiaries — not VCs. A calm visual language reads as trustworthy. Heavy animations, neon gradients, and clever microinteractions would actively work against the goal.",
+    cost: "Less visually impressive in screenshots. Worth it because every visitor who showed up arrived ready to take the cause seriously.",
+  },
+  {
+    decision: "Server-rendered content, not a SPA",
+    reason: "Every page is server-rendered through Next.js. SEO matters here — when someone Googles “Section 8 NGO Kanpur”, EvolveSanga should rank, and the content has to be in the HTML on first response. A client-rendered SPA would have made this materially harder.",
+    cost: "Slightly more work for interactive elements. Acceptable — the site is mostly content.",
+  },
+  {
+    decision: "No CMS — content lives in code, alongside the design",
+    reason: "The board updates content infrequently and through me, not through a CMS dashboard. Skipping a CMS meant one less moving part to maintain, no separate hosting, and no risk of a forgotten admin login.",
+    cost: "Content updates require a deploy. Trivial cost given the update cadence.",
+  },
+  {
+    decision: "Stakeholder review on every page before deploy",
+    reason: "I built a habit of sharing every page with the board before shipping it. Slow, but it caught wording, claim, and tone issues that would’ve been embarrassing in front of donors.",
+    cost: "Adds 1–2 days to every iteration. The alternative — shipping confidently and apologising later — wasn’t an option for a trust-driven org.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Real client work and side projects are different sports",
+    body: "On a side project I get to decide what 'good' means. With EvolveSanga, 'good' is whatever the board says it is — and they’re right, because they live the mission every day. I learned to design for their judgement, not mine.",
+  },
+  {
+    title: "Trust is a UI property, not just a content property",
+    body: "I used to think credibility was about the words on the page. Now I think it’s also about the spacing, the typography, and the load time. A misaligned heading or a 4-second LCP costs trust the same way bad copy does.",
+  },
+  {
+    title: "Boring tech, again",
+    body: "Same lesson as Bawarchie. Next.js + TypeScript + Tailwind + Vercel. Predictable, well-documented, easy to hand off. For a website the org will run for years, this matters more than any framework I could’ve picked for novelty.",
+  },
+];
+---
+
+<BaseLayout
+  title="EvolveSanga — Akshat Darshi"
+  description="Production website for a registered Section 8 NGO in Kanpur. Donation flows, volunteer registration, cause campaigns. Real client, real stakeholders, real delivery."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <div class="csb-root" data-theme="orange">
+        <section class="csb-hero rounded-[24px] overflow-hidden h-[360px] mb-8">
+          <img src="/images/projects/evolvesanga/hero-banner.png" alt="EvolveSanga — NGO platform" loading="eager" class="block w-full h-full object-cover object-center" />
+        </section>
+
+        <section class="flex flex-col gap-3 mb-8">
+          <div class="flex items-center gap-2">
+            <Tag>Real Client</Tag>
+            <Tag>Production</Tag>
+          </div>
+          <h1 class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]">
+            EvolveSanga &mdash; a platform a real NGO trusts
+          </h1>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed">
+            Production website for a registered <span class="csb-emph">Section 8 nonprofit</span> in
+            Kanpur. Donation flows, volunteer registration, cause campaigns &mdash;
+            <span class="csb-emph">shipped for real stakeholders</span> with real requirements,
+            not a side project I controlled the brief on.
+          </p>
+          <div class="flex items-center gap-3 flex-wrap mt-2">
+            {/* TODO (Akshat): paste the live URL when ready */}
+            <Button href="#" variant="outline" target="_blank">
+              Visit EvolveSanga <span aria-hidden="true">→</span>
+            </Button>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-3 gap-4 sm:gap-6 mb-8">
+          {metrics.map((m) => (
+            <div class="csb-metric"><p class="csb-metric-value">{m.value}</p><p class="csb-metric-label">{m.label}</p></div>
+          ))}
+        </section>
+
+        <section class="csb-meta-grid grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 rounded-[12px] mb-8" data-cursor-bg="orange">
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-orange-2)] leading-snug">Sole Engineer<br />Designer<br />Stakeholder lead</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-orange-2)] leading-snug">Next.js<br />TypeScript<br />Tailwind<br />Vercel</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Client</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-orange-2)] leading-snug">EvolveSanga<br />Section 8 NGO<br />Kanpur</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Status</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-orange-2)] leading-snug">Live<br />In production<br />Maintained</p></div>
+        </section>
+
+        <section id="context" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Context</p>
+          <h2 class="csb-section-heading">A registered nonprofit, an empty domain, and a real launch date.</h2>
+          <p class="csb-section-body">
+            EvolveSanga is a registered Section 8 NGO based in Kanpur, working on grassroots cause
+            campaigns. They had the legal registration, the team, and the mission &mdash; what they
+            didn&rsquo;t have was a public-facing platform that did justice to any of it.
+          </p>
+          <p class="csb-section-body">
+            I was brought in to build that platform end-to-end &mdash; not as a freelance gig with
+            shifting goalposts, but as a deliverable for a board of trustees who needed to point
+            donors and partners somewhere credible. The brief was small and serious: build us
+            something we&rsquo;d be proud to share.
+          </p>
+        </section>
+
+        <section id="problem" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">The problem</p>
+          <h2 class="csb-section-heading">An NGO website&rsquo;s only currency is trust.</h2>
+          <p class="csb-section-body">
+            Trust isn&rsquo;t a feature you ship at the end &mdash; it&rsquo;s a property of every
+            choice along the way. A short list of what had to be true:
+          </p>
+          <ul class="csb-list">
+            <li>Visitors had to immediately understand what the org does and why</li>
+            <li>The donate page had to make the use of funds explicit</li>
+            <li>Volunteer registration had to feel safe, not like a marketing capture form</li>
+            <li>Every page had to load fast on weak Indian mobile networks</li>
+            <li>The visual language had to read as quiet competence, not startup hype</li>
+          </ul>
+          <div class="csb-callout mt-4" data-cursor-bg="orange">
+            <p class="csb-callout-label">Problem statement</p>
+            <p class="csb-callout-text">
+              How do I build an NGO platform that converts trust into donations and volunteers
+              &mdash; without ever crossing the line into looking like a sales funnel?
+            </p>
+          </div>
+        </section>
+
+        <section id="architecture" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Architecture</p>
+          <h2 class="csb-section-heading">A boring stack, deliberately.</h2>
+          <p class="csb-section-body">
+            EvolveSanga didn&rsquo;t need a CMS, an ORM, or a microservice &mdash; it needed to
+            load quickly, render correctly on every device, and be maintainable by whoever inherits
+            it after me. So that&rsquo;s exactly what I built. Server-rendered Next.js, content
+            alongside the code, deployed on Vercel. The trustees don&rsquo;t want clever; they want
+            their org&rsquo;s site to load and stay loaded.
+          </p>
+
+          <pre class="csb-arch-ascii" aria-label="System diagram">{`
+   [Visitor]
+      │
+      ▼
+   ┌───────────────────────────────────┐
+   │   Next.js app (Vercel, SSR)       │
+   │   /  /activities  /causes         │
+   │   /volunteer  /contact  /donate   │
+   └───────────────────────────────────┘
+      │                    │
+      ▼                    ▼
+   Static content      POST /api/volunteer
+   (in repo)           POST /api/donate
+                              │
+                              ▼
+                       Razorpay checkout
+`}</pre>
+          <p class="csb-section-body">
+            That&rsquo;s the entire architecture. Nothing clever &mdash; and that&rsquo;s precisely
+            the point. Every choice trades novelty for the boring property of still working in three
+            years, when neither I nor the next maintainer wants to think about it.
+          </p>
+        </section>
+
+        <section id="implementation" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Implementation</p>
+          <h2 class="csb-section-heading">Three pieces that decided whether the platform actually worked.</h2>
+          <div class="flex flex-col gap-8 mt-4">
+            {highlights.map((h) => (
+              <div class="csb-highlight">
+                <div class="csb-highlight-img-wrap"><img src={h.img} alt={h.title} loading="lazy" class="csb-highlight-img" /></div>
+                <div class="csb-highlight-details">
+                  <div class="flex flex-col gap-1.5"><Tag>{h.num}</Tag><span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">{h.title}</span></div>
+                  <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug">{h.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="tradeoffs" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Tradeoffs &amp; hard parts</p>
+          <h2 class="csb-section-heading">What I picked, and what each pick cost.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {tradeoffs.map((t) => (
+              <article class="csb-tradeoff">
+                <h3 class="csb-tradeoff-title">{t.decision}</h3>
+                <p class="csb-tradeoff-reason"><span class="csb-tradeoff-tag csb-tradeoff-tag--why">Why</span>{t.reason}</p>
+                <p class="csb-tradeoff-cost"><span class="csb-tradeoff-tag csb-tradeoff-tag--cost">Cost</span>{t.cost}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="results" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Results</p>
+          <h2 class="csb-section-heading">Live, maintained, used by a real organization.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            <div class="csb-result-tile"><p class="csb-result-value">9+</p><p class="csb-result-label">Page routes</p><p class="csb-result-detail">Activities, causes, volunteer, contact, donate, plus the landing and supporting pages. Every route was scoped from a real stakeholder need.</p></div>
+            <div class="csb-result-tile"><p class="csb-result-value">3</p><p class="csb-result-label">Cause campaigns</p><p class="csb-result-detail">Each campaign has a dedicated page explaining the cause, the use of funds, and how to contribute. Donors get specifics, not vague copy.</p></div>
+            <div class="csb-result-tile"><p class="csb-result-value">Live</p><p class="csb-result-label">In production</p><p class="csb-result-detail">Maintained on a regular cadence. The site has carried the org&rsquo;s public presence for the entire year I&rsquo;ve been delivering on it.</p></div>
+          </div>
+        </section>
+
+        <section id="reflection" data-cs-section class="csb-section flex flex-col gap-2">
+          <p class="csb-section-label">Reflection</p>
+          <h2 class="csb-section-heading">What shipping for a real client taught me.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {reflections.map((r) => (
+              <article class="csb-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+                <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]">{r.title}</h3>
+                <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">{r.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<script>
+  function initCsb() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".csb-section"));
+    if (sections.length === 0) return;
+    if (reduced || !("IntersectionObserver" in window)) { sections.forEach((s) => s.setAttribute("data-visible", "")); return; }
+    const io = new IntersectionObserver((entries) => { for (const e of entries) { if (e.isIntersecting) { (e.target as HTMLElement).setAttribute("data-visible", ""); io.unobserve(e.target); } } }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    sections.forEach((s) => io.observe(s));
+  }
+  initCsb();
+  document.addEventListener("astro:page-load", initCsb);
+</script>

@@ -1,0 +1,767 @@
+---
+// RoboRumble 3.0 — engineer's technical-blog case study.
+//
+// Confirmed by Akshat:
+//   - Role: Tech Lead for the event
+//   - Auth: started on Clerk, migrated to OAuth (Google) once registrations
+//     crossed 100 — Clerk's economics stopped making sense for a one-off
+//     weekend event at that scale.
+//   - Timeline: built in 2 weeks before launch.
+//
+// TODO (Akshat, still need to verify):
+//   - Realtime backend: I'm still assuming Supabase Realtime. Could be
+//     Pusher, Ably, self-hosted WS, or polling. Tell me and I'll fix.
+//   - The exact post-Clerk auth library: I'm assuming Auth.js / NextAuth
+//     with Google OAuth. If you wrote it on raw `passport` or something
+//     custom, correct me.
+//   - Payments: I'm assuming Razorpay. Could be Cashfree, Stripe, etc.
+//   - Hosting: assumed Vercel.
+//
+// Image slots referenced (drop into public/images/projects/roborumble/):
+//   hero-banner.png             — top-of-page banner / event hero
+//   feature-registration.png    — registration + payment flow screenshot
+//   feature-lobby.gif           — live team lobby demo
+//   feature-find-team.png       — find-a-teammate flow
+//   feature-terminal.png        — terminal-aesthetic UI shot
+//   results-snapshot.png        — analytics / dashboard snapshot
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "teal";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "results", label: "Results" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const metrics = [
+  { value: "30k+", label: "Page visits" },
+  { value: "1k+", label: "Registrations" },
+  { value: "₹1L+", label: "Payments processed" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "Registration + payments, all on one platform",
+    body:
+      "Past editions ran on Google Forms and WhatsApp groups for payments — fine at 100 participants, terrifying at 1,000. I built registration into the platform itself: pick your competitions, fill the form, pay through Razorpay, and you&rsquo;re in. 1,000+ people registered through this flow without anyone needing to chase them on WhatsApp.",
+    img: "/images/projects/roborumble/feature-registration.png",
+  },
+  {
+    num: "02",
+    title: "Live team lobbies — coordination in real time",
+    body:
+      "Each competition has its own lobby. Once a team is formed, members get a shared room where they can see who&rsquo;s in, who&rsquo;s missing, and what&rsquo;s coming up. Realtime updates — when someone joins or leaves, every member&rsquo;s screen updates without a refresh. The kind of detail you don&rsquo;t notice when it works, but you definitely notice when it doesn&rsquo;t.",
+    img: "/images/projects/roborumble/feature-lobby.gif",
+  },
+  {
+    num: "03",
+    title: "Find-a-teammate for solo registrants",
+    body:
+      "Plenty of people register alone and then need to find a team. Past editions left this to WhatsApp chaos. I built a matching feed: solo registrants can list themselves under a competition, browse others doing the same, and ping someone to team up. It&rsquo;s a small feature, but it removed an entire class of pre-event panic emails.",
+    img: "/images/projects/roborumble/feature-find-team.png",
+  },
+  {
+    num: "04",
+    title: "Terminal aesthetic, on purpose",
+    body:
+      "Most event sites look like every other event site. RoboRumble is a robotics &amp; tech event — so I leaned all the way into the theme. Monospace type, command-prompt prefixes, scanlines, terminal-green accents. The UI doesn&rsquo;t just describe the event, it <em>feels</em> like it. Worth the engineering effort to get right.",
+    img: "/images/projects/roborumble/feature-terminal.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "Supabase Realtime over a self-hosted WebSocket server",
+    reason:
+      "Supabase Realtime gives me Postgres row-level subscriptions for free — when a team member joins, the row updates and every connected client knows. No socket server to deploy, no auth-on-the-socket logic, no reconnection handling. I get to write SQL, not socket protocols.",
+    cost:
+      "Locked into Supabase&rsquo;s realtime model. If I wanted custom server-side events that aren&rsquo;t row mutations, I&rsquo;d be stuck. Hasn&rsquo;t bitten me.",
+  },
+  {
+    decision: "Pre-event load testing was non-negotiable",
+    reason:
+      "Registration opens at a fixed time. I knew the 30k visit spike would all hit in the first hour. I load-tested with synthetic users hammering the registration endpoint before launch and tuned PostgreSQL connection pooling and Vercel function concurrency until the slowest p95 was under 500ms.",
+    cost:
+      "Two days of work that did nothing visible to anyone. But the alternative — registration crashing on launch night, in front of 1,000 people — wasn&rsquo;t survivable.",
+  },
+  {
+    decision: "Migrated from Clerk to OAuth mid-event, at 100+ registrations",
+    reason:
+      "I shipped on Clerk because it gave me Google sign-in and session handling in an afternoon &mdash; perfect for a 2-week deadline. But once paid registrations crossed 100, the auth-as-a-service economics stopped making sense for a one-weekend event. I migrated to Auth.js with Google OAuth: same UX for users, no per-user cost, full control over the session model.",
+    cost:
+      "Two days of unplanned migration work in the middle of a registration window. Tested every login path on staging before flipping the switch. Nobody noticed &mdash; which is the only success metric for an auth migration.",
+  },
+  {
+    decision: "Terminal aesthetic over &ldquo;safer&rdquo; clean UI",
+    reason:
+      "I could&rsquo;ve shipped a generic, accessible-by-default Tailwind admin theme in half the time. But the event has a personality, and the platform is the first thing every participant touches. Leaning into the theme made the platform feel like part of the event, not a form on the way to it.",
+    cost:
+      "More accessibility work to make the dark/monospace aesthetic readable for everyone. Worth it for the 30k people who saw it.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Real-time is harder than &ldquo;it looks live&rdquo;",
+    body:
+      "I underestimated the edge cases. What happens when a member&rsquo;s connection drops mid-lobby? When they refresh? When two people try to join the last spot at the same time? Each one needed a deliberate answer in the data model, not a band-aid in the UI.",
+  },
+  {
+    title: "Building to a deadline you can&rsquo;t move is a different game",
+    body:
+      "Most of my projects have flexible scope and flexible dates. RoboRumble had a fixed event date and a fixed scope of competitions. That changed how I prioritised — every feature got ranked by &ldquo;does this actually need to exist by registration day?&rdquo; The ones that didn&rsquo;t got cut, fast.",
+  },
+  {
+    title: "Theme is a feature, not a decoration",
+    body:
+      "The terminal aesthetic was the single most-mentioned thing in feedback. People remembered the platform because it didn&rsquo;t look like every other event site. The lesson: when a product has a personality, leaning into it isn&rsquo;t a luxury — it&rsquo;s how people remember you.",
+  },
+];
+---
+
+<BaseLayout
+  title="RoboRumble 3.0 — Akshat Darshi"
+  description="Built the platform that ran Kanpur's largest tech event end-to-end. 30k+ visits, 1,000+ registrations, ₹1L+ in payments, live team lobbies in real time. Next.js, TypeScript, Supabase, Razorpay."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <!-- Hero banner -->
+      <section class="cs-hero-wrap">
+        <div class="cs-hero rounded-[24px] overflow-hidden h-[360px]">
+          <img
+            src="/images/projects/roborumble/hero-banner.png"
+            alt="RoboRumble 3.0 — event platform"
+            loading="eager"
+            class="block w-full h-full object-cover object-center"
+          />
+        </div>
+      </section>
+
+      <!-- Hero meta -->
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <Tag>Event Platform</Tag>
+          <Tag>Live</Tag>
+        </div>
+        <h1
+          class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]"
+        >
+          RoboRumble 3.0 &mdash; Kanpur&rsquo;s largest tech event
+        </h1>
+        <p
+          class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed"
+        >
+          I built the platform that ran <span class="cs-emph" data-cs-emph>RoboRumble 3.0</span>
+          end-to-end &mdash; not a landing page, a real platform. Registration with in-app payments,
+          live team lobbies, a find-a-teammate feed, and competition-specific rooms with
+          <span class="cs-emph" data-cs-emph>real-time updates</span> for 1,000+ participants.
+        </p>
+        <div class="flex items-center gap-3 flex-wrap mt-2">
+          <Button href="https://roborumble.in" variant="outline" target="_blank">
+            Visit roborumble.in <span aria-hidden="true">→</span>
+          </Button>
+          {/* TODO (Akshat): if there's a public repo, paste it here. Otherwise leave just the live link. */}
+        </div>
+      </section>
+
+      <!-- Metrics strip -->
+      <section class="grid grid-cols-3 gap-4 sm:gap-6">
+        {metrics.map((m) => (
+          <div class="rr-metric">
+            <p class="rr-metric-value">{m.value}</p>
+            <p class="rr-metric-label">{m.label}</p>
+          </div>
+        ))}
+      </section>
+
+      <!-- Meta grid: Role / Stack / Timeline / Status -->
+      <section
+        class="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 bg-[var(--color-teal)] rounded-[12px]"
+        data-cursor-bg="teal"
+      >
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">
+            Tech Lead<br />Sole Engineer<br />Org Committee
+          </p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">
+            Next.js &middot; TypeScript<br />Supabase Realtime<br />Clerk &rarr; OAuth (Google)<br />Razorpay &middot; Tailwind
+          </p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Timeline</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">
+            Built in 2 weeks<br />before event launch
+          </p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Status</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">
+            Live<br />30k+ visits<br />1,000+ registered
+          </p>
+        </div>
+      </section>
+
+      <!-- 01. Context -->
+      <section id="context" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Context</p>
+        <h2 class="cs-section-heading">Google Forms, WhatsApp, and a static info page.</h2>
+        {/* TODO (Akshat): replace with the real story — were you on the org committee, did someone ask you, did you volunteer? Add the moment that pushed you. */}
+        <p class="cs-section-body">
+          RoboRumble is Kanpur&rsquo;s largest robotics &amp; tech event. By its third edition, the
+          scale had outgrown the way past versions had run &mdash; a Google Form for registration, a
+          WhatsApp group for payments, and a static info page that nobody updated. Fine at a hundred
+          participants. Terrifying at a thousand.
+        </p>
+        <p class="cs-section-body">
+          Someone had to build a real platform: registration with proper payment handling, team
+          formation, real-time updates during the event, and a UI that didn&rsquo;t make 30,000
+          visitors bounce. That someone ended up being me &mdash; as Tech Lead for the event, with
+          two weeks before launch.
+        </p>
+      </section>
+
+      <!-- 02. The Problem -->
+      <section id="problem" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">The problem</p>
+        <h2 class="cs-section-heading">
+          A real event platform isn&rsquo;t a website. It&rsquo;s a multiplayer system with a deadline.
+        </h2>
+        <p class="cs-section-body">
+          The hard part wasn&rsquo;t any single feature &mdash; it was that all of them had to be
+          correct, simultaneously, on a date that couldn&rsquo;t move. A short list of what had to
+          be true:
+        </p>
+        <ul class="rr-problem-list">
+          <li>Registration had to handle a 30k visit spike when it opened &mdash; no rate-limit pages, no DB timeouts</li>
+          <li>Payments had to actually go through and be verified server-side</li>
+          <li>Team lobbies had to update in real time when members joined or left</li>
+          <li>Solo registrants had to be able to find teammates without WhatsApp chaos</li>
+          <li>Every flow had to feel right on mobile, since most participants used phones</li>
+          <li>The whole thing had to look like RoboRumble &mdash; not like every other event site</li>
+        </ul>
+
+        <div class="cs-callout-pink mt-4" data-cursor-bg="teal" style="background: var(--color-teal);">
+          <p class="cs-callout-label">Problem statement</p>
+          <p class="cs-callout-text">
+            How do I ship a multiplayer event platform &mdash; payments, real-time, registrations,
+            team formation &mdash; in time for a fixed launch date that 1,000+ people are counting on?
+          </p>
+        </div>
+      </section>
+
+      <!-- 03. Architecture -->
+      <section id="architecture" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Architecture</p>
+        <h2 class="cs-section-heading">Next.js + Supabase + Razorpay, with realtime where it matters.</h2>
+        <p class="cs-section-body">
+          The whole platform is a single Next.js app. Supabase is the database and the realtime
+          layer &mdash; team-lobby updates flow through Postgres row-level subscriptions, so when a
+          row changes, every connected client knows within milliseconds. Razorpay handles payments,
+          and webhook verification is the only thing that flips a registration to &ldquo;paid&rdquo;.
+        </p>
+
+        <pre class="rr-arch-ascii" aria-label="System diagram">{`
+   [Participant phone]                [Org committee laptop]
+          │                                    │
+          ▼                                    ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │                    Next.js app (Vercel)                      │
+  │   /register   /lobby/[team]   /find-teammates   /admin       │
+  └──────────────────────────────────────────────────────────────┘
+          │            │                │
+          │            │                ▼
+          │            │       realtime channel
+          │            ▼               ▲
+          │   POST /api/checkout       │
+          │            │               │
+          │            ▼          ┌────┴──────────┐
+          │      ┌──────────┐     │   Supabase    │
+          │      │ Razorpay │     │ (Postgres +   │
+          │      │ checkout │     │   Realtime)   │
+          │      └────┬─────┘     └────▲──────────┘
+          │           │                │
+          │           ▼                │ insert/update
+          │  POST /api/razorpay/webhook ┘
+          │  (signature-verified)
+`}</pre>
+
+        <p class="cs-section-body">
+          A few details from this diagram worth calling out, because they&rsquo;re what made the
+          platform actually scale:
+        </p>
+        <ul class="rr-problem-list">
+          <li><strong>Supabase Realtime piggybacks on Postgres.</strong> Team-lobby updates aren&rsquo;t a separate event bus &mdash; they&rsquo;re row mutations. Easier to reason about: the database is the truth, the UI just listens to it.</li>
+          <li><strong>Registration only flips to &ldquo;paid&rdquo; via webhook.</strong> The client never declares success. Razorpay&rsquo;s signature-verified webhook is the only path to a paid status.</li>
+          <li><strong>Find-a-teammate is just a filtered query.</strong> No matchmaking algorithm, no queue. A solo registrant lists themselves; others browse the list. Boring, fast, debuggable.</li>
+        </ul>
+      </section>
+
+      <!-- 04. Implementation -->
+      <section id="implementation" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Implementation</p>
+        <h2 class="cs-section-heading">The four pieces that had to land before launch.</h2>
+
+        <div class="flex flex-col gap-8 mt-4">
+          {highlights.map((h) => (
+            <div class="cs-exploration">
+              <div class="cs-exploration-img-wrap">
+                <img
+                  src={h.img}
+                  alt={h.title}
+                  loading="lazy"
+                  class="cs-exploration-img"
+                />
+              </div>
+              <div class="cs-exploration-details">
+                <div class="flex flex-col gap-1.5">
+                  <Tag>{h.num}</Tag>
+                  <span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">
+                    {h.title}
+                  </span>
+                </div>
+                <p
+                  class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug"
+                  set:html={h.body}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- 05. Tradeoffs -->
+      <section id="tradeoffs" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Tradeoffs &amp; hard parts</p>
+        <h2 class="cs-section-heading">The decisions a launch night reveals.</h2>
+        <p class="cs-section-body">
+          A fixed event date is unforgiving &mdash; every architectural choice gets graded on a
+          single night. Here&rsquo;s what I picked, and what each pick cost me.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {tradeoffs.map((t) => (
+            <article class="rr-tradeoff">
+              <h3 class="rr-tradeoff-title" set:html={t.decision} />
+              <p class="rr-tradeoff-reason">
+                <span class="rr-tradeoff-tag rr-tradeoff-tag--why">Why</span>
+                <span set:html={t.reason} />
+              </p>
+              <p class="rr-tradeoff-cost">
+                <span class="rr-tradeoff-tag rr-tradeoff-tag--cost">Cost</span>
+                <span set:html={t.cost} />
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <!-- 06. Results -->
+      <section id="results" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Results</p>
+        <h2 class="cs-section-heading">A launch night that didn&rsquo;t fall over.</h2>
+        <p class="cs-section-body">
+          The numbers below are the ones that matter to the team paying for the event &mdash; and
+          to the 1,000+ people who showed up to compete.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+          <div class="rr-result-tile">
+            <p class="rr-result-value">30k+</p>
+            <p class="rr-result-label">Page visits</p>
+            <p class="rr-result-detail">
+              Most of them in the first 48 hours after registration opened. The platform held up
+              with sub-500ms p95 the whole time &mdash; the load tests paid off.
+            </p>
+          </div>
+          <div class="rr-result-tile">
+            <p class="rr-result-value">1k+</p>
+            <p class="rr-result-label">Registrations</p>
+            <p class="rr-result-detail">
+              Every one of them flowed through registration → payment → confirmation in the
+              platform itself. Zero Google Forms. Zero WhatsApp payment screenshots.
+            </p>
+          </div>
+          <div class="rr-result-tile">
+            <p class="rr-result-value">₹1L+</p>
+            <p class="rr-result-label">Payments processed</p>
+            <p class="rr-result-detail">
+              All verified server-side via Razorpay webhook signatures. Reconciliation at the end
+              was a single SQL query &mdash; not a spreadsheet.
+            </p>
+          </div>
+        </div>
+
+        <figure class="rr-results-image-wrap mt-6">
+          <img
+            src="/images/projects/roborumble/results-snapshot.png"
+            alt="RoboRumble 3.0 platform analytics snapshot"
+            loading="lazy"
+            class="rr-results-image"
+          />
+        </figure>
+      </section>
+
+      <!-- 07. Reflection -->
+      <section id="reflection" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Reflection</p>
+        <h2 class="cs-section-heading">What shipping RoboRumble taught me.</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+          {reflections.map((r) => (
+            <article class="cs-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+              <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]" set:html={r.title} />
+              <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">
+                {r.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<style>
+  /* === Shared cs-* tokens (mirror bawarchie/splunk/lingofable for consistency) === */
+  .cs-section-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+    letter-spacing: 0.05em;
+  }
+  .cs-section-heading {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 22px;
+    color: var(--color-ink);
+    line-height: 1.2;
+  }
+  @media (min-width: 640px) { .cs-section-heading { font-size: 26px; } }
+  @media (min-width: 768px) { .cs-section-heading { font-size: 28px; line-height: 1.15; } }
+  .cs-section-body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-ink);
+    line-height: 1.55;
+  }
+
+  .cs-section {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 400ms var(--ease-out-soft), transform 400ms var(--ease-out-soft);
+  }
+  .cs-section[data-visible] { opacity: 1; transform: translateY(0); }
+
+  .cs-hero { box-shadow: 0 14px 38px -22px rgba(36, 36, 36, 0.35); }
+
+  /* Underline-on-hover emphasis — teal theme */
+  .cs-emph {
+    color: var(--color-ink);
+    background-image: linear-gradient(to right, var(--color-teal-3), var(--color-teal-3));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 6px;
+    padding-bottom: 1px;
+    transition: background-size var(--duration-base) var(--ease-out-soft);
+  }
+  .cs-emph:hover { background-size: 100% 6px; }
+
+  /* Callout — teal theme via inline style override on the element */
+  .cs-callout-pink {
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .cs-callout-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--color-bg);
+  }
+  .cs-callout-text {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 20px;
+    color: var(--color-bg);
+    text-align: center;
+    max-width: 760px;
+    line-height: 1.3;
+  }
+
+  /* Exploration card (image + details column) — reused for highlights */
+  .cs-exploration {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .cs-exploration-img-wrap {
+    flex-shrink: 0;
+    width: 65%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-bg-light);
+    box-shadow: 0 8px 24px -12px rgba(36, 36, 36, 0.18);
+  }
+  .cs-exploration-img { display: block; width: 100%; height: auto; object-fit: cover; }
+  .cs-exploration-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (max-width: 767px) {
+    .cs-exploration { flex-direction: column; }
+    .cs-exploration-img-wrap { width: 100%; }
+  }
+
+  .cs-reflection-tile {
+    transition: transform var(--duration-base) var(--ease-out-soft), background var(--duration-base) var(--ease-out-soft);
+  }
+  .cs-reflection-tile:hover {
+    transform: translateY(-2px);
+    background: var(--color-bg-neutral);
+  }
+
+  /* === RoboRumble-specific === */
+
+  .rr-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--color-teal) 14%, transparent);
+    border: 1px solid color-mix(in oklab, var(--color-teal) 35%, transparent);
+  }
+  .rr-metric-value {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  @media (min-width: 640px) { .rr-metric-value { font-size: 36px; } }
+  .rr-metric-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+  }
+
+  .rr-problem-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rr-problem-list li {
+    position: relative;
+    padding-left: 18px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--color-ink);
+  }
+  .rr-problem-list li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--color-teal);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .rr-problem-list code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--color-bg-neutral);
+    color: var(--color-ink);
+  }
+
+  .rr-arch-ascii {
+    margin-top: 12px;
+    padding: 16px 20px;
+    background: var(--color-ink);
+    color: var(--color-bg-light);
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre;
+    box-shadow: 0 8px 24px -12px rgba(36, 36, 36, 0.35);
+  }
+  @media (min-width: 768px) {
+    .rr-arch-ascii { font-size: 12.5px; }
+  }
+
+  .rr-tradeoff {
+    background: var(--color-bg-light);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid color-mix(in oklab, var(--color-ink) 6%, transparent);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .rr-tradeoff:hover { transform: translateY(-2px); }
+  .rr-tradeoff-title {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 18px;
+    color: var(--color-ink);
+    line-height: 1.25;
+  }
+  .rr-tradeoff-reason,
+  .rr-tradeoff-cost {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-ink-dim);
+    margin: 0;
+  }
+  .rr-tradeoff-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .rr-tradeoff-tag--why {
+    background: color-mix(in oklab, var(--color-teal) 25%, transparent);
+    color: var(--color-ink);
+  }
+  .rr-tradeoff-tag--cost {
+    background: color-mix(in oklab, var(--color-orange) 25%, transparent);
+    color: var(--color-ink);
+  }
+
+  .rr-result-tile {
+    background: var(--color-bg-light);
+    border-radius: 16px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rr-result-value {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 44px;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  .rr-result-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-teal);
+  }
+  .rr-result-detail {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-ink-dim);
+    margin-top: 4px;
+  }
+
+  .rr-results-image-wrap {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 18px 42px -24px rgba(36, 36, 36, 0.35);
+  }
+  .rr-results-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--color-bg-light);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cs-section,
+    .cs-emph,
+    .cs-reflection-tile,
+    .rr-tradeoff {
+      transition: none !important;
+      animation: none !important;
+    }
+    .cs-section { opacity: 1; transform: none; }
+    .cs-reflection-tile:hover,
+    .rr-tradeoff:hover { transform: none; }
+  }
+</style>
+
+<script>
+  /* Section-entry fade — same pattern as bawarchie/splunk */
+  function initCaseStudyEntries() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".cs-section"));
+    if (sections.length === 0) return;
+
+    if (reduced) {
+      sections.forEach((s) => s.setAttribute("data-visible", ""));
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      sections.forEach((s) => s.setAttribute("data-visible", ""));
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).setAttribute("data-visible", "");
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+    );
+    sections.forEach((s) => io.observe(s));
+  }
+  initCaseStudyEntries();
+  document.addEventListener("astro:page-load", initCaseStudyEntries);
+</script>

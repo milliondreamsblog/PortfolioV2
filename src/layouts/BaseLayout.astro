@@ -1,0 +1,174 @@
+---
+import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
+import SitePet from "../components/site/SitePet.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  bodyClass?: string;
+  darkHtml?: boolean;
+  showPet?: boolean;
+  /** Override the canonical URL — pass a path (e.g. "/home") when the
+   *  current page should consolidate SEO signals onto a different URL. */
+  canonical?: string;
+}
+
+const {
+  title = "Akshat Darshi — Software Engineer",
+  description = "Akshat Darshi — software engineer building production SaaS, agentic GenAI, and Voice AI systems. Backend-heavy full-stack: Next.js, Go, Spring Boot, AWS, LangChain. Currently @ Tracks & Towers Infratech.",
+  image = "/og.png",
+  bodyClass = "",
+  darkHtml = false,
+  showPet = true,
+  canonical,
+} = Astro.props;
+
+const canonicalUrl = new URL(canonical ?? Astro.url.pathname, Astro.site).href;
+const ogImageUrl = new URL(image, Astro.site).href;
+
+// JSON-LD Person schema — feeds Google's knowledge panel + rich results.
+// Update if any of these facts change (employer, school, sameAs links).
+const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Akshat Darshi",
+  alternateName: "milliondreamsblog",
+  url: Astro.site?.href ?? "https://milliondreams.vercel.app/",
+  image: ogImageUrl,
+  jobTitle: "Software Engineer",
+  email: "akshatsan23@gmail.com",
+  worksFor: {
+    "@type": "Organization",
+    name: "Tracks & Towers Infratech",
+  },
+  alumniOf: {
+    "@type": "CollegeOrUniversity",
+    name: "University Institute of Engineering and Technology, CSJM University",
+  },
+  knowsAbout: [
+    "Software Engineering",
+    "Full-Stack Development",
+    "Backend Engineering",
+    "TypeScript",
+    "Next.js",
+    "Go",
+    "Spring Boot",
+    "Agentic AI",
+    "Generative AI",
+    "LLM Pipelines",
+    "Retrieval-Augmented Generation",
+    "Voice AI",
+    "AWS",
+    "Docker",
+    "PostgreSQL",
+    "Machine Learning",
+  ],
+  sameAs: [
+    "https://www.linkedin.com/in/akshat-darshi/",
+    "https://github.com/milliondreamsblog",
+    "https://x.com/darshi_akshat",
+    "https://codolio.com/profile/milliondreamsblog",
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="author" content="Akshat Darshi" />
+    <meta
+      name="keywords"
+      content="Akshat Darshi, software engineer, full-stack developer, Next.js, TypeScript, Go, Spring Boot, agentic AI, GenAI, LLM, RAG, voice AI, AWS, Docker, portfolio"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#eae6db" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- OpenGraph -->
+    <meta property="og:type" content="profile" />
+    <meta property="profile:first_name" content="Akshat" />
+    <meta property="profile:last_name" content="Darshi" />
+    <meta property="profile:username" content="milliondreamsblog" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:alt" content="Akshat Darshi — software engineer portfolio" />
+    <meta property="og:site_name" content="Akshat Darshi" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@darshi_akshat" />
+    <meta name="twitter:creator" content="@darshi_akshat" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content="Akshat Darshi — software engineer portfolio" />
+
+    <!-- Structured data: Person schema for Google knowledge panel / rich results -->
+    <script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
+
+    <link rel="icon" type="image/png" href="/portfolio-logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;500;600&display=swap"
+    />
+    <title>{title}</title>
+    <ClientRouter />
+    {darkHtml && <style set:html="html { background: var(--color-ink) !important; }" />}
+
+    <style is:global>
+      /*
+        View Transitions — disable all default animations so page swaps
+        are instant. Named groups (wallet-veil) can opt back in.
+      */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation: none !important;
+      }
+
+      /* Wallet finale: the cream overlay on onboarding shares `wallet-veil`
+         with a matching veil on home, so the cream fades out while home's
+         content slides in under it. */
+      ::view-transition-old(wallet-veil),
+      ::view-transition-new(wallet-veil) {
+        animation-duration: 720ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      /* Sunrise flow — already covered by instant root, but keep for safety. */
+      html[data-sunrise-play]::view-transition-old(root),
+      html[data-sunrise-play]::view-transition-new(root) {
+        animation: none !important;
+      }
+
+      /* Edit card: card flies from gallery position to edit screen center. */
+      ::view-transition-old(edit-card),
+      ::view-transition-new(edit-card) {
+        animation-duration: 480ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      /* Named groups (sidebar, footer) — no animation either. */
+      ::view-transition-old(sidebar),
+      ::view-transition-new(sidebar),
+      ::view-transition-old(footer),
+      ::view-transition-new(footer) {
+        animation: none !important;
+      }
+    </style>
+  </head>
+  <body class={bodyClass}>
+    <slot />
+    {showPet && <SitePet />}
+  </body>
+</html>

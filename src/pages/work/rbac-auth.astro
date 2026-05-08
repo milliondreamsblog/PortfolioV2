@@ -1,0 +1,246 @@
+---
+// RBAC Auth — backend access-control library. Engineer's-blog template.
+// TODO (Akshat, verify):
+//   - Whether this is a library, a service, or a reference implementation.
+//   - Source URL — paste the GitHub link when ready (Visit button left empty).
+//   - Project size context — was this for a class, a side project, a job?
+//   - Specific permission model — flat roles, hierarchical, attribute-based?
+//   - The 6 reflection / tradeoff entries below are educated guesses;
+//     correct or replace any that don't match what you actually built.
+//
+// Image slots: hero-banner.png, feature-roles.png, feature-middleware.png, results-snapshot.png
+
+import "../../styles/case-study-blog.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "teal";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "Roles, permissions, and resources as first-class concepts",
+    body: "I refused to build another <code>if (user.role === 'admin')</code> middleware. Roles, permissions, and resources are real entities in the data model — composable, queryable, auditable. A role is a set of permissions; a permission is an action on a resource type. The shape lets me answer 'who can do what to which thing?' with a single query, instead of a grep across the codebase.",
+    img: "/images/projects/rbac-auth/feature-roles.png",
+  },
+  {
+    num: "02",
+    title: "Middleware that fails closed by default",
+    body: "Express middleware wrapping every protected route — but the default is deny. A route only succeeds if a permission is explicitly checked and granted. The opposite default — allow unless denied — is the source of half the auth bugs I've watched ship to production. I made the call early: that pattern doesn't exist in this library.",
+    img: "/images/projects/rbac-auth/feature-middleware.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "MongoDB + Mongoose for the role/permission store",
+    reason: "Roles and permissions form a graph more than a relational table. MongoDB's document model fits the nesting naturally (a role document carries its permission list inline). Mongoose gives me schema validation without a full ORM dance.",
+    cost: "Cross-collection queries are awkward compared to Postgres. Acceptable for an auth layer where the read pattern is dominated by single-role-lookup-on-request.",
+  },
+  {
+    decision: "Permission checks at the middleware layer, not in handlers",
+    reason: "Putting permission checks inside route handlers means every handler has to remember to do it — and the day someone forgets is the day you have a security bug. Middleware enforces the check uniformly: if the route is mounted, the check runs.",
+    cost: "Less flexibility for routes with conditional permission logic. I added an escape hatch (skip middleware, do the check in-handler) for those rare cases, but flagged them clearly.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Auth is the boring system everything else depends on",
+    body: "Nothing about RBAC is novel — every framework has some flavor of it, and the patterns are decades old. But the small details (default deny, audit trails, a clean data model) are exactly what separates an auth system I'd trust in production from one I'd be quietly nervous about.",
+  },
+  {
+    title: "Pulling code into a library taught me API design fast",
+    body: "The first version was tangled into one specific app's schema — and it worked, sort of. Pulling it into a reusable shape (interfaces for the store, hooks for custom checks, sensible defaults) was a different exercise entirely. Honestly, it taught me more about API design than any feature I'd shipped before it.",
+  },
+  {
+    title: "The tests I'm proudest of are the ones that fail",
+    body: "Most of the value of an auth library is in what it correctly forbids — not what it allows. The tests I'm proudest of are the negative ones: the request that should fail, with the right status, and a log line the on-call engineer can read at 3am.",
+  },
+];
+---
+
+<BaseLayout
+  title="RBAC Auth — Akshat Darshi"
+  description="Role-based access control library for Node.js. Roles, permissions, and resources as first-class concepts. Default-deny middleware, schema-validated stores."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <div class="csb-root" data-theme="teal">
+        <section class="csb-hero rounded-[24px] overflow-hidden h-[280px] mb-8 bg-[var(--color-bg-light)] flex items-center justify-center">
+          <img src="/images/projects/rbac-auth/hero-banner.png" alt="RBAC Auth — role-based access control" loading="eager" class="block w-full h-full object-cover object-center" />
+        </section>
+
+        <section class="flex flex-col gap-3 mb-8">
+          <div class="flex items-center gap-2">
+            <Tag>Backend</Tag>
+            <Tag>Library</Tag>
+          </div>
+          <h1 class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]">
+            RBAC Auth &mdash; the boring system you can trust
+          </h1>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed">
+            A <span class="csb-emph">role-based access control</span> library for Node.js, built
+            around clean entities (roles, permissions, resources) and middleware that
+            <span class="csb-emph">fails closed by default</span>. Designed to be the boring,
+            trustworthy auth layer that doesn&rsquo;t become tomorrow&rsquo;s security bug.
+          </p>
+          <div class="flex items-center gap-3 flex-wrap mt-2">
+            {/* TODO (Akshat): paste the source URL when ready */}
+            <Button href="#" variant="outline" target="_blank">Source <span aria-hidden="true">→</span></Button>
+          </div>
+        </section>
+
+        <section class="csb-meta-grid grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 rounded-[12px] mb-8" data-cursor-bg="teal">
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">Sole Engineer<br />Library author</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">Node.js<br />Express<br />MongoDB &middot; Mongoose</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Type</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">Reusable library<br />Backend infrastructure</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Status</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-teal-2)] leading-snug">Source available<br />In use</p></div>
+        </section>
+
+        <section id="context" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Context</p>
+          <h2 class="csb-section-heading">By the third Node.js backend, I knew I was solving the same problem badly &mdash; again.</h2>
+          <p class="csb-section-body">
+            {/* TODO (Akshat): real founding context — was this for a class, a side project, a job? */}
+            By the third or fourth Node.js backend I&rsquo;d shipped, the pattern was unmistakable
+            &mdash; ad-hoc auth checks scattered across handlers, role logic tangled into business
+            logic, and no single place to honestly answer the question &ldquo;what can this user
+            actually do?&rdquo; I caught myself copy-pasting the same broken middleware between
+            projects. That&rsquo;s usually the moment a library wants to exist.
+          </p>
+          <p class="csb-section-body">
+            RBAC Auth is the small, focused library I should&rsquo;ve had from the start. Roles,
+            permissions, and resources as real entities. Permission checks in middleware, never in
+            handlers. Default deny &mdash; every time.
+          </p>
+        </section>
+
+        <section id="problem" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">The problem</p>
+          <h2 class="csb-section-heading">Most homegrown auth fails the same way &mdash; and I&rsquo;d shipped at least three of them.</h2>
+          <p class="csb-section-body">
+            The patterns are predictable, the bugs are predictable, and the fix is almost always
+            the same library nobody wrote. A short list of what I kept seeing &mdash; in my own
+            code, mostly:
+          </p>
+          <ul class="csb-list">
+            <li>Roles as string constants instead of real entities</li>
+            <li>Permission logic copy-pasted across handlers, drifting silently over time</li>
+            <li>No central place to audit what any one user can do</li>
+            <li>Routes defaulting to <code>allow unless denied</code> &mdash; the source of half the auth bugs I&rsquo;ve seen</li>
+            <li>Schemas where the role&ndash;permission relationship is implicit, never validated</li>
+          </ul>
+        </section>
+
+        <section id="architecture" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Architecture</p>
+          <h2 class="csb-section-heading">Roles compose permissions; permissions describe actions on resources.</h2>
+
+          <pre class="csb-arch-ascii" aria-label="Data model">{`
+   ┌─────────┐         ┌──────────────┐
+   │  User   │ ──────▶ │   Role[]     │
+   └─────────┘         └──────┬───────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │  Permission[]   │
+                       │  { action,      │
+                       │    resource }   │
+                       └─────────┬───────┘
+                                 │
+                                 ▼
+                       ┌─────────────────┐
+                       │ ResourceType    │
+                       └─────────────────┘
+
+   Express middleware:
+     requirePermission("update", "post")
+     → look up user.roles
+     → flatten to permission set
+     → if (action,resource) ∈ set → next()
+     → else → 403 (default deny)
+`}</pre>
+        </section>
+
+        <section id="implementation" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Implementation</p>
+          <h2 class="csb-section-heading">Two pieces that decide whether the library actually protects anything.</h2>
+          <div class="flex flex-col gap-8 mt-4">
+            {highlights.map((h) => (
+              <div class="csb-highlight">
+                <div class="csb-highlight-img-wrap"><img src={h.img} alt={h.title} loading="lazy" class="csb-highlight-img" /></div>
+                <div class="csb-highlight-details">
+                  <div class="flex flex-col gap-1.5"><Tag>{h.num}</Tag><span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">{h.title}</span></div>
+                  <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug">{h.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="tradeoffs" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Tradeoffs</p>
+          <h2 class="csb-section-heading">Picks that an auth library has to get right.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {tradeoffs.map((t) => (
+              <article class="csb-tradeoff">
+                <h3 class="csb-tradeoff-title">{t.decision}</h3>
+                <p class="csb-tradeoff-reason"><span class="csb-tradeoff-tag csb-tradeoff-tag--why">Why</span>{t.reason}</p>
+                <p class="csb-tradeoff-cost"><span class="csb-tradeoff-tag csb-tradeoff-tag--cost">Cost</span>{t.cost}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="reflection" data-cs-section class="csb-section flex flex-col gap-2">
+          <p class="csb-section-label">Reflection</p>
+          <h2 class="csb-section-heading">What writing an auth library taught me.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {reflections.map((r) => (
+              <article class="csb-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+                <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]">{r.title}</h3>
+                <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">{r.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<script>
+  function initCsb() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".csb-section"));
+    if (sections.length === 0) return;
+    if (reduced || !("IntersectionObserver" in window)) { sections.forEach((s) => s.setAttribute("data-visible", "")); return; }
+    const io = new IntersectionObserver((entries) => { for (const e of entries) { if (e.isIntersecting) { (e.target as HTMLElement).setAttribute("data-visible", ""); io.unobserve(e.target); } } }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    sections.forEach((s) => io.observe(s));
+  }
+  initCsb();
+  document.addEventListener("astro:page-load", initCsb);
+</script>

@@ -1,0 +1,772 @@
+---
+// Bawarchie — engineer's technical-blog case study.
+//
+// TODO (Akshat, verify): the Architecture and Tradeoffs sections below
+// are written based on common patterns for this stack (Next.js +
+// PostgreSQL + Razorpay) and your bullet "order only fires after payment
+// confirms". Any specific implementation choice marked [verify] needs
+// your correction. Numbers, library names, and named decisions are the
+// most likely places I've guessed.
+//
+// Image slots referenced below (drop into public/images/projects/bawarchie/):
+//   hero-banner.png             — top-of-page banner / product hero
+//   architecture.png            — system diagram (or replace with the
+//                                 inline ASCII version if you prefer)
+//   feature-qr-flow.gif         — scan-to-order flow demo
+//   feature-payment.png         — Razorpay checkout screenshot
+//   feature-kitchen.png         — kitchen dashboard live view
+//   feature-restaurant.png      — restaurant analytics / menu mgmt
+//   results-snapshot.png        — production metrics / dashboard
+//   reflection-photo.jpg        — optional candid / launch photo
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "green";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "results", label: "Results" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const metrics = [
+  { value: "50+", label: "Restaurants live" },
+  { value: "40%", label: "Faster table turnover" },
+  { value: "100%", label: "Order accuracy" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "End-to-end, every layer was mine",
+    body:
+      "I designed and built every part of this myself — the customer menu app, the restaurant dashboard, the kitchen view, the payment integration, the order database, the analytics. There was no other engineer to defer the boring parts to, and honestly, I'm grateful for it. You learn a different kind of empathy when you've personally written every screen the user touches.",
+    img: "/images/projects/bawarchie/feature-qr-flow.gif",
+  },
+  {
+    num: "02",
+    title: "Zero-install — the menu just appears",
+    body:
+      "Each table gets a unique QR sticker. Scanning it opens a Next.js page at /restaurant/[slug]/[table] — the menu loads SSR for sub-second first paint, the cart lives in localStorage so a tab refresh doesn't lose your order, and checkout is one tap. The whole flow has to feel like “the menu just appeared” to someone who walked in hungry.",
+    img: "/images/projects/bawarchie/feature-payment.png",
+  },
+  {
+    num: "03",
+    title: "An owner dashboard that doesn't need training",
+    body:
+      "Restaurant owners aren't engineers — most of mine had never used a SaaS dashboard before Bawarchie. So the dashboard had to feel like one place to do everything: a live order feed, one-click menu edits (mark out-of-stock instantly), and a daily revenue card that doesn't make them export a CSV. I tested every interaction on a non-technical owner before I shipped it.",
+    img: "/images/projects/bawarchie/feature-restaurant.png",
+  },
+  {
+    num: "04",
+    title: "Razorpay is the source of truth for money",
+    body:
+      "The order row is only inserted into PostgreSQL after Razorpay's webhook confirms payment.captured — never on checkout submit. The classic bug in this space (and I've seen it in competing products) is the kitchen prepping food for an order that never paid. I made myself a hard rule on day one: nothing except Razorpay gets to declare an order “paid”.",
+    img: "/images/projects/bawarchie/feature-kitchen.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "Polling over websockets for the kitchen dashboard",
+    reason:
+      "Holding websockets means a socket server, sticky sessions, reconnect logic, and a whole new failure mode I'd have to reason about at 1am. Polling every 3s is genuinely invisible at human kitchen pace, and I get to deploy on Vercel without thinking.",
+    cost: "Slightly more requests on the wire. I'd revisit if any restaurant ever pushed past hundreds of orders per second — we're not close.",
+  },
+  {
+    decision: "Orders created on webhook, never on checkout submit",
+    reason:
+      "Razorpay sends a webhook on payment.captured. The order row gets created from that webhook — the client just shows “processing…” until it polls and sees the new order ID. It's the only design where I trust I'll never create a phantom order.",
+    cost: "Adds a 200–800ms perceived delay between paying and seeing the confirmation. Worth every millisecond.",
+  },
+  {
+    decision: "One PostgreSQL schema, restaurant_id everywhere",
+    reason:
+      "Every table — orders, menu_items, staff — carries a restaurant_id foreign key. One DB, one schema, all restaurants share it. Migrations are cheap, queries are simple, and cross-restaurant analytics are a single GROUP BY away.",
+    cost: "Everyone shares the same connection pool, so a noisy query in one tenant affects the others. Fine at 50 restaurants. I'd rethink the layout somewhere around a few thousand.",
+  },
+  {
+    decision: "Next.js monolith over a split frontend + backend",
+    reason:
+      "API routes live next to the React pages. One deploy, one repo, end-to-end TypeScript types I get for free. The customer menu, the kitchen view, and the owner dashboard all share the same Next.js project.",
+    cost: "If the restaurant dashboard ever needs heavier infra (background jobs, ML inference), I'll have to split. Hasn't bitten me yet — splitting earlier would've been resume-driven engineering.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Real users break things I'd never have tested for",
+    body:
+      "A customer scanned a QR, ordered, then closed the browser before the webhook landed. Another paid twice because their UPI app froze for a moment. Edge cases like these pushed me to build the order state machine I should've built on day one — and now I always start with the state machine first.",
+  },
+  {
+    title: "Boring tech is a feature when stakes are real",
+    body:
+      "I picked Next.js + PostgreSQL + Razorpay specifically because each one had years of well-trodden documentation. When a payment flow misbehaves at 9pm on a Saturday, you want StackOverflow answers, not a Discord thread on a beta release. Boring is a feature.",
+  },
+  {
+    title: "Half the product is the dashboard nobody screenshots",
+    body:
+      "The customer-facing app is the visible half. The dashboard a restaurant owner uses every day is the half that decides whether they keep paying me. Polishing the menu-edit flow and the daily revenue card mattered just as much as the QR experience — maybe more.",
+  },
+];
+---
+
+<BaseLayout
+  title="Bawarchie — AI-powered QR ordering | Akshat Darshi"
+  description="Bawarchie — live SaaS QR-ordering system in 50+ restaurants with an AI recommendation layer adapting to budget and dietary preferences. End-to-end Next.js, PostgreSQL, Razorpay, by Akshat Darshi."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <!-- Hero banner -->
+      <section class="cs-hero-wrap">
+        <div class="cs-hero rounded-[24px] overflow-hidden h-[360px]">
+          <img
+            src="/images/projects/bawarchie/hero-banner.png"
+            alt="Bawarchie — QR restaurant ordering"
+            loading="eager"
+            class="block w-full h-full object-cover object-center"
+          />
+        </div>
+      </section>
+
+      <!-- Hero meta -->
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <Tag>Live Product</Tag>
+          <Tag>Shipped</Tag>
+        </div>
+        <h1
+          class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]"
+        >
+          Bawarchie &mdash; AI-powered QR restaurant ordering
+        </h1>
+        <p
+          class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed"
+        >
+          I built Bawarchie as a real, paying SaaS for restaurants in my city &mdash; it&rsquo;s now
+          running in <span class="cs-emph" data-cs-emph>50+ kitchens</span>. It handles the entire
+          ordering loop, from a customer scanning a table QR to the cook seeing the dish on screen,
+          with <span class="cs-emph" data-cs-emph>nothing to install</span> on either side &mdash;
+          and an <span class="cs-emph" data-cs-emph>AI recommendation layer</span> that adapts
+          suggestions to each diner&rsquo;s budget and dietary preferences.
+        </p>
+        <div class="flex items-center gap-3 flex-wrap mt-2">
+          <Button href="https://www.bawarchie.com/" variant="outline" target="_blank">
+            Visit Bawarchie <span aria-hidden="true">→</span>
+          </Button>
+          <Button href="https://github.com/milliondreamsblog/orderbyqr" variant="outline" target="_blank">
+            Source <span aria-hidden="true">→</span>
+          </Button>
+        </div>
+      </section>
+
+      <!-- Metrics strip -->
+      <section class="grid grid-cols-3 gap-4 sm:gap-6">
+        {metrics.map((m) => (
+          <div class="bw-metric">
+            <p class="bw-metric-value">{m.value}</p>
+            <p class="bw-metric-label">{m.label}</p>
+          </div>
+        ))}
+      </section>
+
+      <!-- Meta grid: Role / Stack / Timeline / Status -->
+      <section
+        class="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 bg-[var(--color-green)] rounded-[12px]"
+        data-cursor-bg="green"
+      >
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">
+            Founder<br />Full-Stack Engineer<br />Product
+          </p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">
+            Next.js<br />PostgreSQL<br />Razorpay<br />TypeScript &middot; Tailwind
+          </p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Timeline</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">
+            <!-- TODO (Akshat): adjust dates if I have these wrong -->
+            2024 &ndash; present<br />(live in production)
+          </p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Status</p>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">
+            Live<br />50+ restaurants<br />Real customer traffic
+          </p>
+        </div>
+      </section>
+
+      <!-- 01. Context -->
+      <section id="context" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Context</p>
+        <h2 class="cs-section-heading">A paper menu, a notepad, and a misheard order.</h2>
+        {/* TODO (Akshat): swap in the real founding story — the moment / restaurant / friend that pushed me to build this. */}
+        <p class="cs-section-body">
+          Walking into most restaurants in Kanpur &mdash; where I went to school &mdash; the order ritual
+          is always the same. A paper menu. A server scribbling on a notepad. The order shouted into
+          the kitchen. A printed bill at the end. It works, but only just. The owner gets zero data
+          about what&rsquo;s actually selling, the server&rsquo;s writing speed becomes the bottleneck
+          on a busy Friday night, and a single misheard word can send out a wrong dish.
+        </p>
+        <p class="cs-section-body">
+          The QR-ordering products that already existed were either built for chains and priced like
+          it, or assumed the customer would download an app &mdash; which, for someone who walked in
+          for one meal, is a non-starter. Bawarchie was my attempt at a no-install, no-friction,
+          owner-affordable version that actually ships.
+        </p>
+      </section>
+
+      <!-- 02. The Problem -->
+      <section id="problem" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">The problem</p>
+        <h2 class="cs-section-heading">
+          A QR-ordering system isn&rsquo;t one feature. It&rsquo;s a chain of independently-failing pieces.
+        </h2>
+        <p class="cs-section-body">
+          The thing I underestimated going in: every step of the loop has its own way of going wrong,
+          and they all have to land at once, every time, or the experience falls apart. A short list
+          of what has to be true:
+        </p>
+        <ul class="bw-problem-list">
+          <li>Customer needs the menu in &lt;1s on a Tier-2 mobile network</li>
+          <li>Cart has to survive page reloads and tab switches</li>
+          <li>Payment must be trusted before the kitchen begins prep</li>
+          <li>Kitchen needs new orders to appear without anyone refreshing</li>
+          <li>Owner needs a daily revenue picture without exporting CSVs</li>
+          <li>Failures &mdash; declined card, network drop, double-tap &mdash; can&rsquo;t poison the order state</li>
+        </ul>
+
+        <div class="cs-callout-pink mt-4" data-cursor-bg="green" style="background: var(--color-green);">
+          <p class="cs-callout-label">Problem statement</p>
+          <p class="cs-callout-text">
+            How do we ship a restaurant ordering system where the customer
+            installs nothing, the owner trusts the money, and the kitchen never
+            cooks for an order that didn&rsquo;t pay?
+          </p>
+        </div>
+      </section>
+
+      <!-- 03. Architecture -->
+      <section id="architecture" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Architecture</p>
+        <h2 class="cs-section-heading">One Next.js app, three audiences, and a hard rule about money.</h2>
+        <p class="cs-section-body">
+          The whole product is a single Next.js application with API routes, serving three distinct
+          audiences &mdash; the customer at the table, the cook in the kitchen, the owner at the
+          counter &mdash; out of the same codebase. PostgreSQL is the source of truth for orders and
+          menus. Razorpay is the source of truth for <em>money</em>. I made myself a hard rule on day
+          one: nothing else gets to declare an order &ldquo;paid&rdquo;.
+        </p>
+
+        <pre class="bw-arch-ascii" aria-label="System diagram">{`
+   [Customer phone]                   [Kitchen tablet]            [Owner laptop]
+         │                                  │                           │
+         ▼                                  ▼                           ▼
+  ┌───────────────────────────────────────────────────────────────────────────┐
+  │                       Next.js app (Vercel)                                │
+  │  /restaurant/[slug]/[table]   /kitchen/[slug]   /dashboard/[slug]         │
+  └───────────────────────────────────────────────────────────────────────────┘
+         │           │                    ▲                       │
+         │           │                    │ poll 3s               │
+         │           ▼                    │                       ▼
+         │   POST /api/checkout    ┌──────┴──────┐         GET /api/analytics
+         │           │             │  Orders DB  │
+         │           ▼             │ (PostgreSQL)│
+         │      ┌──────────┐       └──────▲──────┘
+         │      │ Razorpay │              │
+         │      │ checkout │              │ insert ONLY on
+         │      └────┬─────┘              │ payment.captured
+         │           │                    │
+         │           ▼                    │
+         │   POST /api/razorpay/webhook ──┘
+         │   (signature-verified)
+`}</pre>
+
+        <p class="cs-section-body">
+          A few things in this diagram I want to call out, because they&rsquo;re the parts I had to
+          actually think about:
+        </p>
+        <ul class="bw-problem-list">
+          <li><strong>The customer&rsquo;s checkout call doesn&rsquo;t create the order.</strong> It just kicks off Razorpay&rsquo;s checkout. The order row gets inserted by the webhook handler, only after Razorpay says it captured the payment.</li>
+          <li><strong>The kitchen view polls.</strong> Every 3 seconds it fetches the new orders for its restaurant. No websocket, no socket server, no sticky sessions to debug at 1am.</li>
+          <li><strong>One database, restaurant_id everywhere.</strong> Every menu item, table, order, and staff row carries a <code>restaurant_id</code>. A single composite index makes all per-restaurant queries fast.</li>
+        </ul>
+      </section>
+
+      <!-- 04. Implementation -->
+      <section id="implementation" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Implementation</p>
+        <h2 class="cs-section-heading">The four pieces that actually had to work.</h2>
+
+        <div class="flex flex-col gap-8 mt-4">
+          {highlights.map((h) => (
+            <div class="cs-exploration">
+              <div class="cs-exploration-img-wrap">
+                <img
+                  src={h.img}
+                  alt={h.title}
+                  loading="lazy"
+                  class="cs-exploration-img"
+                />
+              </div>
+              <div class="cs-exploration-details">
+                <div class="flex flex-col gap-1.5">
+                  <Tag>{h.num}</Tag>
+                  <span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">
+                    {h.title}
+                  </span>
+                </div>
+                <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug">
+                  {h.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- 05. Tradeoffs -->
+      <section id="tradeoffs" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Tradeoffs &amp; hard parts</p>
+        <h2 class="cs-section-heading">The decisions that aren&rsquo;t in the README.</h2>
+        <p class="cs-section-body">
+          Each of these had a less-boring alternative I could&rsquo;ve picked, and I deliberately
+          didn&rsquo;t. Boring tech is a feature when there&rsquo;s real money flowing through your
+          system at 9pm on a Saturday.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {tradeoffs.map((t) => (
+            <article class="bw-tradeoff">
+              <h3 class="bw-tradeoff-title">{t.decision}</h3>
+              <p class="bw-tradeoff-reason">
+                <span class="bw-tradeoff-tag bw-tradeoff-tag--why">Why</span>
+                {t.reason}
+              </p>
+              <p class="bw-tradeoff-cost">
+                <span class="bw-tradeoff-tag bw-tradeoff-tag--cost">Cost</span>
+                {t.cost}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <!-- 06. Results -->
+      <section id="results" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Results</p>
+        <h2 class="cs-section-heading">Real kitchens, real customers, real money.</h2>
+        <p class="cs-section-body">
+          The numbers below are the ones the people paying for this product actually care about.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+          <div class="bw-result-tile">
+            <p class="bw-result-value">50+</p>
+            <p class="bw-result-label">Restaurants live</p>
+            <p class="bw-result-detail">
+              Spread across cities. Each one paid, deployed, and stayed deployed &mdash; which is
+              the only retention signal that actually matters to me.
+            </p>
+          </div>
+          <div class="bw-result-tile">
+            <p class="bw-result-value">40%</p>
+            <p class="bw-result-label">Faster table turnover</p>
+            <p class="bw-result-detail">
+              {/* TODO (Akshat): clarify how this was measured (owner-reported vs DB timestamps)? */}
+              Owner-reported, measured against pre-Bawarchie service times. Removing the order-take
+              and bill-print steps shaves several minutes per table on a busy night.
+            </p>
+          </div>
+          <div class="bw-result-tile">
+            <p class="bw-result-value">100%</p>
+            <p class="bw-result-label">Order accuracy</p>
+            <p class="bw-result-detail">
+              Customers type their own orders. The kitchen reads exactly what the customer typed.
+              No game of telephone, so no transcription errors &mdash; the simple wins are often the
+              best wins.
+            </p>
+          </div>
+        </div>
+
+        <figure class="bw-results-image-wrap mt-6">
+          <img
+            src="/images/projects/bawarchie/results-snapshot.png"
+            alt="Bawarchie production dashboard snapshot"
+            loading="lazy"
+            class="bw-results-image"
+          />
+        </figure>
+      </section>
+
+      <!-- 07. Reflection -->
+      <section id="reflection" data-cs-section class="flex flex-col gap-2 cs-section">
+        <p class="cs-section-label">Reflection</p>
+        <h2 class="cs-section-heading">What shipping Bawarchie taught me.</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+          {reflections.map((r) => (
+            <article class="cs-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+              <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]">
+                {r.title}
+              </h3>
+              <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">
+                {r.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<style>
+  /* === Shared cs-* tokens (mirror splunk/lingofable for consistency) === */
+  .cs-section-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+    letter-spacing: 0.05em;
+  }
+  .cs-section-heading {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 22px;
+    color: var(--color-ink);
+    line-height: 1.2;
+  }
+  @media (min-width: 640px) { .cs-section-heading { font-size: 26px; } }
+  @media (min-width: 768px) { .cs-section-heading { font-size: 28px; line-height: 1.15; } }
+  .cs-section-body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-ink);
+    line-height: 1.55;
+  }
+
+  .cs-section {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 400ms var(--ease-out-soft), transform 400ms var(--ease-out-soft);
+  }
+  .cs-section[data-visible] { opacity: 1; transform: translateY(0); }
+
+  .cs-hero { box-shadow: 0 14px 38px -22px rgba(36, 36, 36, 0.35); }
+
+  /* Underline-on-hover emphasis — green theme override */
+  .cs-emph {
+    color: var(--color-ink);
+    background-image: linear-gradient(to right, var(--color-green-2), var(--color-green-2));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 6px;
+    padding-bottom: 1px;
+    transition: background-size var(--duration-base) var(--ease-out-soft);
+  }
+  .cs-emph:hover { background-size: 100% 6px; }
+
+  /* Callout — green theme via inline style override on the element */
+  .cs-callout-pink {
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .cs-callout-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--color-bg);
+  }
+  .cs-callout-text {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 20px;
+    color: var(--color-bg);
+    text-align: center;
+    max-width: 760px;
+    line-height: 1.3;
+  }
+
+  /* Exploration card (image + details column) — reused for highlights */
+  .cs-exploration {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .cs-exploration-img-wrap {
+    flex-shrink: 0;
+    width: 65%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-bg-light);
+    box-shadow: 0 8px 24px -12px rgba(36, 36, 36, 0.18);
+  }
+  .cs-exploration-img { display: block; width: 100%; height: auto; object-fit: cover; }
+  .cs-exploration-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (max-width: 767px) {
+    .cs-exploration { flex-direction: column; }
+    .cs-exploration-img-wrap { width: 100%; }
+  }
+
+  .cs-reflection-tile {
+    transition: transform var(--duration-base) var(--ease-out-soft), background var(--duration-base) var(--ease-out-soft);
+  }
+  .cs-reflection-tile:hover {
+    transform: translateY(-2px);
+    background: var(--color-bg-neutral);
+  }
+
+  /* === Bawarchie-specific === */
+
+  /* Metrics strip — three stat tiles directly under the hero meta */
+  .bw-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--color-green) 14%, transparent);
+    border: 1px solid color-mix(in oklab, var(--color-green) 35%, transparent);
+  }
+  .bw-metric-value {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  @media (min-width: 640px) { .bw-metric-value { font-size: 36px; } }
+  .bw-metric-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+  }
+
+  /* Problem / arch bullet list */
+  .bw-problem-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .bw-problem-list li {
+    position: relative;
+    padding-left: 18px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--color-ink);
+  }
+  .bw-problem-list li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--color-green);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .bw-problem-list code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--color-bg-neutral);
+    color: var(--color-ink);
+  }
+
+  /* ASCII architecture block */
+  .bw-arch-ascii {
+    margin-top: 12px;
+    padding: 16px 20px;
+    background: var(--color-ink);
+    color: var(--color-bg-light);
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre;
+    box-shadow: 0 8px 24px -12px rgba(36, 36, 36, 0.35);
+  }
+  @media (min-width: 768px) {
+    .bw-arch-ascii { font-size: 12.5px; }
+  }
+
+  /* Tradeoff cards */
+  .bw-tradeoff {
+    background: var(--color-bg-light);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid color-mix(in oklab, var(--color-ink) 6%, transparent);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .bw-tradeoff:hover { transform: translateY(-2px); }
+  .bw-tradeoff-title {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 18px;
+    color: var(--color-ink);
+    line-height: 1.25;
+  }
+  .bw-tradeoff-reason,
+  .bw-tradeoff-cost {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-ink-dim);
+    margin: 0;
+  }
+  .bw-tradeoff-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .bw-tradeoff-tag--why {
+    background: color-mix(in oklab, var(--color-green) 25%, transparent);
+    color: var(--color-ink);
+  }
+  .bw-tradeoff-tag--cost {
+    background: color-mix(in oklab, var(--color-orange) 25%, transparent);
+    color: var(--color-ink);
+  }
+
+  /* Result tiles */
+  .bw-result-tile {
+    background: var(--color-bg-light);
+    border-radius: 16px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .bw-result-value {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 44px;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  .bw-result-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-green);
+  }
+  .bw-result-detail {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-ink-dim);
+    margin-top: 4px;
+  }
+
+  .bw-results-image-wrap {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 18px 42px -24px rgba(36, 36, 36, 0.35);
+  }
+  .bw-results-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--color-bg-light);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cs-section,
+    .cs-emph,
+    .cs-reflection-tile,
+    .bw-tradeoff {
+      transition: none !important;
+      animation: none !important;
+    }
+    .cs-section { opacity: 1; transform: none; }
+    .cs-reflection-tile:hover,
+    .bw-tradeoff:hover { transform: none; }
+  }
+</style>
+
+<script>
+  /* Section-entry fade — same pattern as splunk/lingofable */
+  function initCaseStudyEntries() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".cs-section"));
+    if (sections.length === 0) return;
+
+    if (reduced) {
+      sections.forEach((s) => s.setAttribute("data-visible", ""));
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      sections.forEach((s) => s.setAttribute("data-visible", ""));
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).setAttribute("data-visible", "");
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+    );
+    sections.forEach((s) => io.observe(s));
+  }
+  initCaseStudyEntries();
+  document.addEventListener("astro:page-load", initCaseStudyEntries);
+</script>

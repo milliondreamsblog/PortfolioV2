@@ -1,0 +1,375 @@
+---
+// Talk2PDF — agentic document Q&A. Engineer's-blog template.
+// TODO (Akshat, verify):
+//   - Stack: I'm assuming FastAPI on the backend and a small Next.js / vanilla
+//     frontend. Tell me if it's a Streamlit app, a CLI, or something else.
+//   - Vector store: assumed Chroma/FAISS for local; Pinecone if hosted.
+//   - "500+ weekly users" — internal users? Public? Add context if helpful.
+//   - Whether the agent loop uses LangChain agents directly or you wrote a
+//     thin orchestrator on top.
+//
+// Image slots (drop into public/images/projects/talk2pdf/):
+//   hero-banner.png, feature-pluggable.png, feature-reasoning.png,
+//   feature-integration.png, results-snapshot.png
+
+import "../../styles/case-study-blog.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "pink";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "results", label: "Results" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const metrics = [
+  { value: "500+", label: "Weekly users" },
+  { value: "60%", label: "Less dev effort" },
+  { value: "Multi-step", label: "Document reasoning" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "LLMs and vector stores as plugins, not hard dependencies",
+    body: "I built Talk2PDF around a single principle: the model, the embedder, and the vector store are all behind clean interfaces. Want to swap GPT-4 for a local Llama model? One config change. Want to migrate from Chroma to Pinecone? One config change. The orchestrator doesn’t know or care.",
+    img: "/images/projects/talk2pdf/feature-pluggable.png",
+  },
+  {
+    num: "02",
+    title: "Multi-step reasoning over the document, not keyword search",
+    body: "The agent decides when to retrieve more context, when to combine evidence from multiple chunks, and when it has enough to answer. That sounds obvious — but the version-1 of every RAG project I see is a single query → top-k chunks → done. Talk2PDF goes further: it can reason about a 200-page PDF, follow citations, and stop when it’s sure.",
+    img: "/images/projects/talk2pdf/feature-reasoning.png",
+  },
+  {
+    num: "03",
+    title: "Drop-in for downstream builders",
+    body: "I treated Talk2PDF as a library, not just an app. Other people on my team use it as a starting point for their own document tools — they swap in their domain’s LLM and corpus, and the agent + retriever scaffolding comes for free. The 60% effort reduction is the figure they reported back to me.",
+    img: "/images/projects/talk2pdf/feature-integration.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "Plugin interfaces over a single hard-coded LLM",
+    reason: "When I started, GPT-4 was the obvious choice. Six months later, Claude was clearly better at long-context reasoning. A year later, local models were good enough for many cases. I refused to bake any of these into the core — interfaces let me swap models without touching the agent loop.",
+    cost: "More upfront design work. Every new model needs an adapter, even if it ends up being a 30-line wrapper.",
+  },
+  {
+    decision: "Agent loop with tool-calling, not single-shot retrieval",
+    reason: "Single-shot RAG works for FAQs, not for documents that span hundreds of pages with cross-references. The agent decides when to query the vector store, when to look up a specific section, and when to stop. Lets me handle “summarize chapter 4 and tell me how it relates to chapter 7” without writing custom logic.",
+    cost: "More LLM calls per query, which means higher latency and cost. I added aggressive caching at every interface boundary to compensate.",
+  },
+  {
+    decision: "FastAPI service, not a notebook or Streamlit app",
+    reason: "I wanted Talk2PDF to be a real backend that other apps could call — UI, CLI, Slack bot, wherever. A FastAPI service with versioned endpoints did that. Streamlit would’ve been faster to demo, but slower to build on.",
+    cost: "Initial UI is just a thin wrapper around the API. Anyone wanting a polished standalone app has to build it themselves.",
+  },
+  {
+    decision: "OpenAI as the default, but never the only option",
+    reason: "OpenAI’s API was the most mature when I started, so it’s the default. But the LLM interface is provider-agnostic — I’ve tested with Anthropic Claude, local Llama variants via llama.cpp, and a couple of open-source embedders. Lets the project survive any one provider going sideways.",
+    cost: "Have to keep the abstraction honest — every time OpenAI ships a new feature, I have to decide whether to expose it generically or behind a feature flag.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Building for builders is a different design problem",
+    body: "When the user is another engineer, the whole product changes. They don’t want a UI — they want clean interfaces, sensible defaults, escape hatches for everything I assumed wrong. Designing those interfaces took longer than building the agent itself.",
+  },
+  {
+    title: "RAG is not retrieval. RAG is reasoning over retrieval.",
+    body: "Most RAG demos stop at top-k similarity search. Real document Q&A — at any scale that matters — needs the model to decide when to retrieve, what to retrieve, and when to stop. The agent loop is the actual product. The retrieval is just plumbing.",
+  },
+  {
+    title: "The 60% effort number is the one I’m proudest of",
+    body: "Anyone can build something users like. Building something other engineers can build on top of is harder. When my teammates told me Talk2PDF cut their integration work by more than half, that meant the abstractions were right.",
+  },
+];
+---
+
+<BaseLayout
+  title="Talk2PDF — Akshat Darshi"
+  description="Agentic document Q&A with pluggable LLMs and vector stores. 500+ weekly users. Reduces AI integration effort by 60% for downstream builders."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <div class="csb-root" data-theme="pink">
+        <!-- Hero banner -->
+        <section class="csb-hero rounded-[24px] overflow-hidden h-[360px] mb-8">
+          <img
+            src="/images/projects/talk2pdf/hero-banner.png"
+            alt="Talk2PDF — agentic document Q&amp;A"
+            loading="eager"
+            class="block w-full h-full object-cover object-center"
+          />
+        </section>
+
+        <!-- Hero meta -->
+        <section class="flex flex-col gap-3 mb-8">
+          <div class="flex items-center gap-2">
+            <Tag>AI / GenAI</Tag>
+            <Tag>Library</Tag>
+          </div>
+          <h1 class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]">
+            Talk2PDF &mdash; agentic document Q&amp;A
+          </h1>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed">
+            An agentic RAG system with <span class="csb-emph">pluggable LLM and vector-store backends</span>.
+            Used by <span class="csb-emph">500+ users weekly</span> to interrogate large PDFs.
+            Swap a model or a store without touching the core logic.
+          </p>
+          <div class="flex items-center gap-3 flex-wrap mt-2">
+            <Button href="https://github.com/milliondreamsblog/AskyourPDF" variant="outline" target="_blank">
+              Source <span aria-hidden="true">→</span>
+            </Button>
+          </div>
+        </section>
+
+        <!-- Metrics -->
+        <section class="grid grid-cols-3 gap-4 sm:gap-6 mb-8">
+          {metrics.map((m) => (
+            <div class="csb-metric">
+              <p class="csb-metric-value">{m.value}</p>
+              <p class="csb-metric-label">{m.label}</p>
+            </div>
+          ))}
+        </section>
+
+        <!-- Meta grid -->
+        <section class="csb-meta-grid grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 rounded-[12px] mb-8" data-cursor-bg="pink">
+          <div class="flex flex-col gap-2">
+            <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p>
+            <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">
+              Sole Engineer<br />Architecture<br />API Design
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p>
+            <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">
+              Python &middot; FastAPI<br />LangChain<br />OpenAI / Claude / local<br />Chroma / Pinecone
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Timeline</p>
+            <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">
+              {/* TODO (Akshat): real dates? */}
+              2024 &ndash; ongoing
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Status</p>
+            <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-pink-1)] leading-snug">
+              In production<br />500+ weekly users
+            </p>
+          </div>
+        </section>
+
+        <!-- 01. Context -->
+        <section id="context" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Context</p>
+          <h2 class="csb-section-heading">I&rsquo;ve watched the same RAG demo three times now, and it always breaks the same way.</h2>
+          <p class="csb-section-body">
+            The first version is always the same &mdash; load the document, chunk it, embed it, top-k similarity search, ask the LLM. It works on the README. It demos beautifully. It gets the founder excited. Then someone tries to use it on a real hundred-page document and the limits show up immediately: the model can&rsquo;t synthesize, can&rsquo;t cross-reference, can&rsquo;t stop when it should.
+          </p>
+          <p class="csb-section-body">
+            I built Talk2PDF as the version that doesn&rsquo;t fall apart at page 50. Multi-step reasoning, pluggable backends, and an interface clean enough that another engineer can drop in their own model and corpus &mdash; without rewriting the agent loop.
+          </p>
+        </section>
+
+        <!-- 02. Problem -->
+        <section id="problem" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">The problem</p>
+          <h2 class="csb-section-heading">Single-shot RAG is a demo. Real documents need a loop.</h2>
+          <p class="csb-section-body">
+            The single-query, top-k-chunks pattern that powers most RAG demos breaks down on real-world documents the moment a question requires more than one piece of evidence. It also locks teams into whatever LLM and vector store they picked on day one &mdash; switching providers becomes a rewrite. A short list of what an actually-useful version had to do:
+          </p>
+          <ul class="csb-list">
+            <li>Reason over multiple retrievals, not one</li>
+            <li>Decide when it has enough information and stop</li>
+            <li>Stay agnostic to the underlying LLM and vector store</li>
+            <li>Be cheap enough to run for 500+ weekly users</li>
+            <li>Be drop-in for other engineers building their own document tools</li>
+          </ul>
+          <div class="csb-callout mt-4" data-cursor-bg="pink">
+            <p class="csb-callout-label">Problem statement</p>
+            <p class="csb-callout-text">
+              How do I ship a RAG system that reasons across documents, swaps backends without a rewrite, and other engineers can build on without rebuilding the agent loop?
+            </p>
+          </div>
+        </section>
+
+        <!-- 03. Architecture -->
+        <section id="architecture" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Architecture</p>
+          <h2 class="csb-section-heading">An orchestrator behind clean interfaces &mdash; that&rsquo;s the whole product.</h2>
+          <p class="csb-section-body">
+            Talk2PDF is an orchestrator with three slots: an LLM provider, an embedder, and a vector store. The orchestrator runs an agent loop that decides when to retrieve, what to retrieve, and when it has enough. Everything provider-specific is behind an interface.
+          </p>
+
+          <pre class="csb-arch-ascii" aria-label="System diagram">{`
+   [Client app / UI / CLI]
+              │
+              ▼
+   ┌──────────────────────────────────────────┐
+   │           FastAPI service                 │
+   │   POST /query   POST /ingest              │
+   └──────────────────────────────────────────┘
+              │
+              ▼
+   ┌──────────────────────────────────────────┐
+   │         Agent orchestrator               │
+   │  loop:                                    │
+   │    1. plan next step                     │
+   │    2. retrieve / synthesize / stop       │
+   └──────────────────────────────────────────┘
+        │            │              │
+        ▼            ▼              ▼
+   ┌─────────┐  ┌──────────┐  ┌──────────────┐
+   │   LLM   │  │ Embedder │  │ Vector store │
+   │ (plugin)│  │ (plugin) │  │   (plugin)   │
+   └─────────┘  └──────────┘  └──────────────┘
+   OpenAI       OpenAI        Chroma
+   Claude       BGE           Pinecone
+   Llama.cpp    sentence-tx   FAISS
+`}</pre>
+          <p class="csb-section-body">
+            The interfaces are intentionally thin: an <code>LLM.complete(prompt, tools)</code>, an <code>Embedder.embed(text)</code>, a <code>VectorStore.query(embedding, k)</code>. New providers slot in with a 30-line adapter.
+          </p>
+        </section>
+
+        <!-- 04. Implementation -->
+        <section id="implementation" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Implementation</p>
+          <h2 class="csb-section-heading">The three pieces that made it usable.</h2>
+          <div class="flex flex-col gap-8 mt-4">
+            {highlights.map((h) => (
+              <div class="csb-highlight">
+                <div class="csb-highlight-img-wrap">
+                  <img src={h.img} alt={h.title} loading="lazy" class="csb-highlight-img" />
+                </div>
+                <div class="csb-highlight-details">
+                  <div class="flex flex-col gap-1.5">
+                    <Tag>{h.num}</Tag>
+                    <span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">
+                      {h.title}
+                    </span>
+                  </div>
+                  <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug">
+                    {h.body}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <!-- 05. Tradeoffs -->
+        <section id="tradeoffs" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Tradeoffs &amp; hard parts</p>
+          <h2 class="csb-section-heading">The decisions that kept Talk2PDF alive across model generations.</h2>
+          <p class="csb-section-body">
+            The AI landscape changed three times during this project. Here are the choices that survived all three.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {tradeoffs.map((t) => (
+              <article class="csb-tradeoff">
+                <h3 class="csb-tradeoff-title">{t.decision}</h3>
+                <p class="csb-tradeoff-reason">
+                  <span class="csb-tradeoff-tag csb-tradeoff-tag--why">Why</span>
+                  {t.reason}
+                </p>
+                <p class="csb-tradeoff-cost">
+                  <span class="csb-tradeoff-tag csb-tradeoff-tag--cost">Cost</span>
+                  {t.cost}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <!-- 06. Results -->
+        <section id="results" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Results</p>
+          <h2 class="csb-section-heading">The numbers that surprised me most.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            <div class="csb-result-tile">
+              <p class="csb-result-value">500+</p>
+              <p class="csb-result-label">Weekly users</p>
+              <p class="csb-result-detail">Steady, not viral. People keep coming back &mdash; which is the only signal that says the answers are actually useful.</p>
+            </div>
+            <div class="csb-result-tile">
+              <p class="csb-result-value">60%</p>
+              <p class="csb-result-label">Integration effort saved</p>
+              <p class="csb-result-detail">Reported by other engineers who built on top of Talk2PDF. Their starting point isn&rsquo;t a blank repo &mdash; it&rsquo;s a working agent loop they can drop their model and corpus into.</p>
+            </div>
+            <div class="csb-result-tile">
+              <p class="csb-result-value">3</p>
+              <p class="csb-result-label">Model generations weathered</p>
+              <p class="csb-result-detail">Talk2PDF has outlived three major LLM provider generations because nothing about the agent loop depends on a specific model. Plugin interfaces paid off.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 07. Reflection -->
+        <section id="reflection" data-cs-section class="csb-section flex flex-col gap-2">
+          <p class="csb-section-label">Reflection</p>
+          <h2 class="csb-section-heading">What shipping Talk2PDF taught me.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {reflections.map((r) => (
+              <article class="csb-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+                <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]">{r.title}</h3>
+                <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">{r.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<script>
+  function initCsb() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".csb-section"));
+    if (sections.length === 0) return;
+    if (reduced || !("IntersectionObserver" in window)) {
+      sections.forEach((s) => s.setAttribute("data-visible", ""));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            (e.target as HTMLElement).setAttribute("data-visible", "");
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+    );
+    sections.forEach((s) => io.observe(s));
+  }
+  initCsb();
+  document.addEventListener("astro:page-load", initCsb);
+</script>

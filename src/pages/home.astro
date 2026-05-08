@@ -1,0 +1,614 @@
+---
+// TODO (phase 2): the LatestLog block (lines ~40-81) and all 7
+// ProjectIndexCard entries (lines ~85-185) still describe Megan's projects
+// (Lingofable, Splunk, GCal Wrapped, Skloňuj, Loop, Microsoft Copilot,
+// CU Reviews). Replace with Akshat's projects from his resume:
+// StreamSight, InferEdge, Talk2Pdf, Bawarchie, ResumeAI — plus the work
+// experience entries (Tracks & Towers, ClimAgro, MANIT) if framed as cards.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Sidebar from "../components/home/Sidebar.astro";
+import LatestLog from "../components/home/LatestLog.astro";
+import ProjectIndexCard from "../components/home/ProjectIndexCard.astro";
+import Footer from "../components/home/Footer.astro";
+import CustomCursor from "../components/home/CustomCursor.astro";
+import { getCurrentVisitor } from "../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "pink";
+---
+
+<BaseLayout
+  title="Work — Akshat Darshi"
+  description="Selected work by Akshat Darshi: live SaaS (Bawarchie), real-time event platforms (RoboRumble), agentic RAG (Talk2PDF), GenAI tooling (ResumeAI), and ML in production (ClimAgro EHM Platform)."
+>
+  <!--
+    Wallet finale veil. Shares `transition:name="wallet-veil"` with the
+    cream backdrop on the onboarding wallet overlay, so the cream persists
+    across the ClientRouter nav from /onboarding → /home and then peels back
+    here. If the visitor lands on /home directly (refresh, deep-link), the
+    script below hides the veil immediately so the page reads normally.
+  -->
+  <div
+    data-home-veil
+    transition:name="wallet-veil"
+    aria-hidden="true"
+    class="home-veil fixed inset-0 z-50 bg-[var(--color-bg)] pointer-events-none"
+  >
+  </div>
+
+  <div class="flex items-stretch min-h-screen" data-home-shell>
+    <Sidebar anon={!visitor} visitorCard={visitor ? { name: visitor.name, color: visitor.color, number: visitor.number, signature: visitor.signature } : null} />
+
+    <main class="flex flex-col gap-6 sm:gap-8 p-4 sm:p-6 md:p-12 flex-1 min-w-0" data-home-main>
+      <div class="flex flex-col gap-8" data-home-stack>
+        <LatestLog date="Apr 12, 2026">
+          <a
+            href="https://simonilincev.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="latest-log__site-link">@Simon Ilincev</a
+          >
+          and I have just launched
+          <a
+            href="https://lingofable.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-site-preview
+            class="latest-log__site-link"
+            >Lingofable<span class="latest-log__preview" aria-hidden="true">
+              <span class="site-preview__chrome">
+                <span class="site-preview__dots"><i></i><i></i><i></i></span>
+                <span class="site-preview__url">lingofable.com</span>
+              </span>
+              <span
+                class="site-preview__thumb"
+                style="background-image: url(/images/projects/lingofable.png);"></span>
+            </span></a
+          >, a language learning app based on comprehensible input! Currently, I'm also building
+          <a
+            href="https://sklonuj.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-site-preview
+            class="latest-log__site-link"
+            >Skloňuj<span class="latest-log__preview" aria-hidden="true">
+              <span class="site-preview__chrome">
+                <span class="site-preview__dots"><i></i><i></i><i></i></span>
+                <span class="site-preview__url">sklonuj.com</span>
+              </span>
+              <span
+                class="site-preview__thumb"
+                style="background-image: url(/images/projects/sklonuj.png);"></span>
+            </span></a
+          >, a tool for Czech learners to practice noun declension — it's being piloted by four
+          universities.
+        </LatestLog>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start max-w-[1072px]">
+          <div class="flex flex-col gap-8 md:pt-0">
+            <ProjectIndexCard
+              title="Lingofable"
+              number={1}
+              role="Co-Founder, Design, Dev, Marketing"
+              team="with Simon Ilincev"
+              shipped="Oct 2025 - present"
+              status="SHIPPED"
+              sideProject
+              description="A mobile app focused on language learning through stories with ~200 users. Featured on Cornell's Speaking of Language Podcast."
+              image="/images/projects/lingofable.gif"
+              imageHeight={280}
+              imagePosition="bottom"
+              href="/work/lingofable"
+              tilt={-0.6}
+            />
+            <ProjectIndexCard
+              title="GCal Wrapped"
+              number={3}
+              role="Co-Creator, Design, Dev"
+              team="with Simon Ilincev"
+              shipped="Apr - May 2025"
+              status="SHIPPED"
+              sideProject
+              description="Interactive and fun-filled lookback into college semesters built for college students. 10K+ users across 200 universities and 90 countries."
+              image="/images/projects/gcal-wrapped.gif"
+              imageHeight={320}
+              href="/work/gcal-wrapped"
+              tilt={0.5}
+            />
+            <ProjectIndexCard
+              title="Loop"
+              number={5}
+              role="Product Manager, Design Engineer"
+              team="1 PM, 2 designers, 3 developers"
+              shipped="Feb 2026 - present"
+              status="IN PROGRESS"
+              description="A Cornell tool for connecting students with campus opportunities and events amidst countless email newsletters."
+              image="/images/projects/loop.png"
+              imageHeight={320}
+              href="https://loop-waitlist.dtiincubator.workers.dev/"
+              external
+              tilt={0.3}
+            />
+          </div>
+          <div class="flex flex-col gap-8 md:pt-10">
+            <ProjectIndexCard
+              title="Splunk"
+              number={2}
+              role="Product Design Intern"
+              team="Data Management"
+              shipped="Summer 2025"
+              status={["INTERNSHIP", "SHIPPED"]}
+              description="Led design for AI-powered root cause analysis and self-healing pipeline for data ingestion issues. Showcased to 5,000+ Splunk users during .conf25."
+              image="/images/projects/splunk.gif"
+              imageHeight={240}
+              href="/work/splunk"
+              tilt={0.6}
+            />
+            <ProjectIndexCard
+              title="Skloňuj"
+              number={4}
+              role="Design, Dev"
+              team="Solo"
+              shipped="March 2026 - present"
+              status="SHIPPED"
+              sideProject
+              description="Noun declension practice for Czech learners with 10K+ drills completed. Piloting at Harvard, Brown, and Columbia. Inspired by my experiences learning Czech."
+              image="/images/projects/sklonuj.png"
+              imageHeight={210}
+              href="https://sklonuj.com"
+              external
+              tilt={-0.5}
+            />
+            <ProjectIndexCard
+              title="Microsoft Copilot for Sales"
+              number={6}
+              role="Design Consultant"
+              team="2 PMs, 5 design consultants"
+              shipped="Jan - May 2025"
+              status="HANDED OVER"
+              description="Designed B2B2C discovery flow for buyers to match organizational requirements to desired products and vendors."
+              image="/images/projects/copilot.gif"
+              imageHeight={270}
+              href="https://www.behance.net/gallery/229681695/Microsoft-x-DCC-SP25"
+              external
+              caseStudyCursor
+              tilt={0.4}
+            />
+            <ProjectIndexCard
+              title="CU Reviews"
+              number={7}
+              role="Product Manager, Designer"
+              team="1 PM, 2 designers, 3 developers, 1 PMM"
+              shipped="Feb 2024 - Jan 2025"
+              status="SHIPPED"
+              description="Enhanced inituitiveness and efficiency of Cornell course metrics display for 3,000+ students. Now live on website!"
+              image="/images/projects/cu-reviews.gif"
+              imageHeight={230}
+              href="/work/cu-reviews"
+              tilt={-0.4}
+            />
+          </div>
+        </div>
+
+        <!-- ──────────── Akshat's projects ──────────── -->
+        <!--
+          A second grid below Megan's. Same 2-column tilted-card layout, with
+          a quiet mono divider line and section label so the two sets read as
+          distinct chapters of work rather than blurring into one long stream.
+          Image paths assume public/images/projects/<slug>.png — drop in real
+          art when ready.
+        -->
+        <div class="flex items-center gap-3 mt-6 max-w-[1072px]">
+          <span class="font-[family-name:var(--font-mono)] text-[12px] uppercase tracking-[0.12em] text-[var(--color-ink-dim)]">
+            More projects &mdash; Akshat
+          </span>
+          <span class="flex-1 h-px bg-[color-mix(in_oklab,var(--color-ink)_15%,transparent)]"></span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start max-w-[1072px]">
+          <div class="flex flex-col gap-8 md:pt-0">
+            <ProjectIndexCard
+              title="Bawarchie"
+              number={1}
+              role="Founder, Full-Stack Engineer"
+              team="Solo"
+              shipped="2024 - present"
+              status={["LIVE", "SAAS"]}
+              description="Live SaaS QR-ordering for 50+ restaurants. Real customer traffic, real payments, end-to-end full-stack ownership."
+              image="/images/projects/bawarchie.png"
+              imageHeight={280}
+              href="/work/bawarchie"
+              tilt={-0.6}
+            />
+            <ProjectIndexCard
+              title="Talk2PDF"
+              number={3}
+              role="Sole Engineer, Architecture"
+              team="Solo"
+              shipped="2024 - ongoing"
+              status="IN USE"
+              sideProject
+              description="Agentic document Q&A with pluggable LLMs and vector stores. 500+ weekly users. Reduces integration effort 60% for downstream builders."
+              image="/images/projects/talk2pdf.png"
+              imageHeight={240}
+              href="/work/talk2pdf"
+              tilt={0.5}
+            />
+            <ProjectIndexCard
+              title="ResumeAI"
+              number={5}
+              role="Sole Engineer"
+              team="Solo"
+              shipped="2025 - ongoing"
+              status="LIVE"
+              sideProject
+              description="GenAI resume coach analyzing 50+ dimensions. Custom LLM chain — 40% faster than naive API calls. 98% parser accuracy."
+              image="/images/projects/resumeai.png"
+              imageHeight={280}
+              href="/work/resumeai"
+              tilt={-0.4}
+            />
+            <ProjectIndexCard
+              title="EHM Platform"
+              number={7}
+              role="ML & Full-Stack Developer"
+              team="ClimAgro Analytics (IIT Kanpur)"
+              shipped="Apr 2025 - Jan 2026"
+              status={["WORK", "SHIPPED"]}
+              description="ESG SaaS at IIT Kanpur–funded climate-tech startup. Integrated and deployed pre-trained ML models powering risk dashboards across 50+ regions."
+              image="/images/projects/ehm-platform.png"
+              imageHeight={240}
+              href="/work/ehm-platform"
+              tilt={0.3}
+            />
+          </div>
+          <div class="flex flex-col gap-8 md:pt-10">
+            <ProjectIndexCard
+              title="RoboRumble 3.0"
+              number={2}
+              role="Tech Lead, Sole Engineer"
+              team="Org Committee"
+              shipped="Built in 2 weeks"
+              status="LIVE"
+              description="Kanpur's largest tech event platform. 30k+ visits, 1k+ registrations, ₹1L+ in payments, real-time team lobbies, terminal-aesthetic UI."
+              image="/images/projects/roborumble.png"
+              imageHeight={320}
+              href="/work/roborumble"
+              tilt={0.6}
+            />
+            <ProjectIndexCard
+              title="EvolveSanga"
+              number={4}
+              role="Sole Engineer, Designer"
+              team="Real Client — Section 8 NGO"
+              shipped="Maintained"
+              status={["LIVE", "CLIENT"]}
+              description="Production website for a registered Section 8 nonprofit in Kanpur. Donation flows, volunteer registration, cause campaigns — shipped for real stakeholders."
+              image="/images/projects/evolvesanga.png"
+              imageHeight={240}
+              href="/work/evolvesanga"
+              tilt={-0.5}
+            />
+            <ProjectIndexCard
+              title="RBAC Auth"
+              number={6}
+              role="Library author"
+              team="Solo"
+              shipped="Backend infra"
+              status="SOURCE"
+              sideProject
+              description="Role-based access control library for Node.js. First-class roles, permissions, and resources. Default-deny middleware."
+              image="/images/projects/rbac-auth.png"
+              imageHeight={200}
+              href="/work/rbac-auth"
+              tilt={0.4}
+            />
+            <ProjectIndexCard
+              title="Misinformation Agent"
+              number={8}
+              role="ML Research Intern"
+              team="MANIT Bhopal"
+              shipped="Jun - Aug 2024"
+              status={["RESEARCH", "INTERNSHIP"]}
+              description="Agentic NLP for misinformation analysis. Transfer learning over pre-trained transformers, with an agent loop that abstains on ambiguous cases."
+              image="/images/projects/misinformation-agent.png"
+              imageHeight={220}
+              href="/work/misinformation-agent"
+              tilt={-0.4}
+            />
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+
+  <CustomCursor color={cursorColor} />
+
+  <style is:global>
+    /*
+      Inline site-preview chips — hovering "Lingofable" / "Skloňuj" inside the
+      LatestLog surfaces a mini browser window with the site thumbnail.
+    */
+    .latest-log__site-link {
+      position: relative;
+      color: var(--color-ink-inverted);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-thickness: 1px;
+      text-decoration-color: color-mix(in oklab, var(--color-ink-inverted) 40%, transparent);
+      transition: text-decoration-color var(--duration-fast) var(--ease-out-soft);
+    }
+    .latest-log__site-link:hover {
+      text-decoration-color: var(--color-ink-inverted);
+    }
+    .latest-log__preview {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      padding: 8px;
+      border-radius: 10px;
+      background: var(--color-bg-light);
+      border: 1px solid color-mix(in oklab, var(--color-ink) 10%, transparent);
+      box-shadow:
+        0 18px 36px -16px rgba(36, 36, 36, 0.55),
+        0 4px 10px -4px rgba(36, 36, 36, 0.35);
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(var(--preview-x, 0px), calc(var(--preview-y, 0px) + 6px)) scale(0.97);
+      transform-origin: bottom center;
+      transition:
+        opacity 200ms var(--ease-out-soft),
+        transform 240ms var(--ease-out-soft);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .latest-log__site-link:hover .latest-log__preview,
+    .latest-log__site-link:focus-visible .latest-log__preview {
+      opacity: 1;
+      transform: translate(var(--preview-x, 0px), var(--preview-y, 0px)) scale(1);
+    }
+    .site-preview__chrome {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 2px;
+    }
+    .site-preview__dots {
+      display: inline-flex;
+      gap: 3px;
+    }
+    .site-preview__dots i {
+      display: block;
+      width: 5px;
+      height: 5px;
+      border-radius: 9999px;
+      background: color-mix(in oklab, var(--color-ink) 30%, transparent);
+    }
+    .site-preview__url {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--color-ink-dim);
+    }
+    .site-preview__thumb {
+      display: block;
+      width: 100%;
+      height: 120px;
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center top;
+      background-color: var(--color-bg-neutral);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .latest-log__preview {
+        transition: opacity 120ms var(--ease-out-soft);
+        transform: translate(var(--preview-x, 0px), var(--preview-y, 0px));
+      }
+      .latest-log__site-link:hover .latest-log__preview {
+        transform: translate(var(--preview-x, 0px), var(--preview-y, 0px));
+      }
+    }
+  </style>
+
+  <style>
+    /*
+      Finale reveal: when we arrive from the wallet transition, the cream veil
+      fades out while the sidebar slides in from the left and the main content
+      fades up, staggered. The `data-finale-arrival` attribute on <html> is
+      set by the script below when a `sessionStorage.wallet:arrival` flag is
+      present (set by the onboarding wallet on submit); a direct visit to
+      /home skips the finale and shows content immediately.
+    */
+    .home-veil {
+      opacity: 0;
+      transition: opacity 640ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    html[data-finale-arrival] .home-veil {
+      opacity: 1;
+      animation: home-veil-peel 1100ms cubic-bezier(0.22, 1, 0.36, 1) 180ms forwards;
+    }
+    @keyframes home-veil-peel {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      60% {
+        opacity: 0.25;
+        transform: translateY(-6%);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-14%);
+      }
+    }
+
+    html[data-finale-arrival] [data-home-shell] > aside,
+    html[data-finale-arrival] [data-home-stack] > *,
+    html[data-finale-arrival] footer {
+      opacity: 0;
+    }
+    html[data-finale-arrival] [data-home-shell] > aside {
+      animation: home-sidebar-slide 620ms cubic-bezier(0.22, 1, 0.36, 1) 320ms forwards;
+    }
+    html[data-finale-arrival] [data-home-stack] > * {
+      animation: home-main-rise 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    html[data-finale-arrival] [data-home-stack] > *:nth-child(1) {
+      animation-delay: 480ms;
+    }
+    html[data-finale-arrival] [data-home-stack] > *:nth-child(2) {
+      animation-delay: 620ms;
+    }
+    html[data-finale-arrival] footer {
+      animation: home-footer-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) 820ms forwards;
+    }
+
+    @keyframes home-sidebar-slide {
+      from {
+        opacity: 0;
+        transform: translateX(-18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    @keyframes home-main-rise {
+      from {
+        opacity: 0;
+        transform: translateY(22px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes home-footer-rise {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .home-veil,
+      html[data-finale-arrival] .home-veil,
+      html[data-finale-arrival] [data-home-shell] > aside,
+      html[data-finale-arrival] [data-home-stack] > *,
+      html[data-finale-arrival] footer {
+        animation: none !important;
+        transition: none !important;
+        opacity: 1;
+        transform: none;
+      }
+      html[data-finale-arrival] .home-veil {
+        opacity: 0;
+      }
+    }
+  </style>
+
+  <script>
+    /*
+      Position the Lingofable / Skloňuj preview cards via fixed coords clamped
+      to the viewport so long text doesn't push the popup off-screen.
+    */
+    function wireSitePreviews() {
+      const PREVIEW_W = 240;
+      const MARGIN = 12;
+      document
+        .querySelectorAll<HTMLElement>("[data-site-preview]:not([data-wired])")
+        .forEach((link) => {
+          link.dataset.wired = "1";
+          const preview = link.querySelector<HTMLElement>(".latest-log__preview");
+          if (!preview) return;
+          // Defer thumb image fetch until hover/focus — saves a request +
+          // decode on initial /home paint without changing visual behavior.
+          const thumb = preview.querySelector<HTMLElement>(".site-preview__thumb");
+          if (thumb && thumb.style.backgroundImage && thumb.style.backgroundImage !== "none") {
+            thumb.dataset.bg = thumb.style.backgroundImage;
+            thumb.style.backgroundImage = "none";
+          }
+          let pending = 0;
+          const place = () => {
+            if (pending) return;
+            pending = requestAnimationFrame(() => {
+              pending = 0;
+              const r = link.getBoundingClientRect();
+              const anchorX = r.left + r.width / 2;
+              const x = Math.max(
+                MARGIN,
+                Math.min(window.innerWidth - PREVIEW_W - MARGIN, anchorX - PREVIEW_W / 2),
+              );
+              const ph = preview.offsetHeight || 176;
+              let y = r.top - ph - MARGIN;
+              if (y < MARGIN) y = r.bottom + MARGIN;
+              preview.style.setProperty("--preview-x", `${x}px`);
+              preview.style.setProperty("--preview-y", `${y}px`);
+            });
+          };
+          const onEnter = () => {
+            if (thumb && thumb.dataset.bg) {
+              thumb.style.backgroundImage = thumb.dataset.bg;
+              delete thumb.dataset.bg;
+            }
+            place();
+          };
+          link.addEventListener("pointerenter", onEnter);
+          link.addEventListener("focus", onEnter);
+        });
+    }
+    wireSitePreviews();
+    document.addEventListener("astro:page-load", wireSitePreviews);
+
+    /*
+      Detect arrival from the wallet transition. The onboarding submit handler
+      sets `wallet:arrival` in sessionStorage right before navigate(); we
+      consume it here on /home mount and arm the finale animations. If the
+      flag is missing (direct visit, reload), we hide the veil immediately.
+
+      Runs on every ClientRouter swap via `astro:page-load` so SPA-style
+      returns to /home also pick up the flag correctly.
+    */
+    function armFinale() {
+      let arrived = false;
+      try {
+        arrived = sessionStorage.getItem("wallet:arrival") === "1";
+        if (arrived) sessionStorage.removeItem("wallet:arrival");
+      } catch {
+        arrived = false;
+      }
+
+      (window as any).__walletArrived = arrived;
+      const root = document.documentElement;
+      if (arrived) {
+        root.setAttribute("data-finale-arrival", "");
+        // Clean up the attribute once the animation has finished so future
+        // CSS changes don't re-trigger anything on subsequent renders. The
+        // combined animation (veil peel + footer slide) lands around 1.55s.
+        window.setTimeout(() => {
+          root.removeAttribute("data-finale-arrival");
+          const veil = document.querySelector<HTMLElement>("[data-home-veil]");
+          if (veil) veil.style.display = "none";
+        }, 2000);
+      } else {
+        // Direct visit — hide the veil up-front so the page reads normally.
+        const veil = document.querySelector<HTMLElement>("[data-home-veil]");
+        if (veil) veil.style.display = "none";
+      }
+    }
+    armFinale();
+    document.addEventListener("astro:page-load", armFinale);
+  </script>
+</BaseLayout>

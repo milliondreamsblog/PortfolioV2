@@ -1,0 +1,103 @@
+---
+// TODO (phase 2): replace this coming-soon stub with an actual blog index
+// once posts exist. Likely structure: a list of post cards rendered from
+// markdown files under src/content/blog/, or external links if the blog
+// lives elsewhere.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Sidebar from "../components/home/Sidebar.astro";
+import Footer from "../components/home/Footer.astro";
+import CustomCursor from "../components/home/CustomCursor.astro";
+import Starfield from "../components/welcome/Starfield.astro";
+import { getCurrentVisitor } from "../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "pink";
+---
+
+<BaseLayout
+  title="Blog — Akshat Darshi"
+  description="Notes from Akshat Darshi on shipping production systems, agentic AI, and the engineering decisions behind them. Coming soon."
+>
+  <div class="flex items-stretch min-h-screen">
+    <Sidebar active="blog" anon={!visitor} visitorCard={visitor ? { name: visitor.name, color: visitor.color, number: visitor.number, signature: visitor.signature } : null} />
+
+    <main class="bg-main relative flex flex-1 min-w-0 overflow-hidden items-center justify-center p-10">
+      <div class="bg-cosmic-veil" aria-hidden="true">
+        <Starfield />
+      </div>
+
+      <div class="bg-coming-soon relative z-[1]">
+        <span>coming soon</span>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="blog" />
+
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<style>
+  /*
+    Blog page — mirrors the Playground stub: cosmic backdrop with drifting
+    starfield + a single translucent "coming soon" plaque, centered. Sidebar
+    stays cream so the site identity is preserved; the main area flips to
+    deep-ink on arrival.
+  */
+  .bg-main {
+    background:
+      radial-gradient(
+        1100px 760px at 22% -10%,
+        var(--color-cosmos-1, #1b1f30) 0%,
+        var(--color-cosmos, #0a0d16) 55%,
+        var(--color-cosmos-2, #05060d) 100%
+      );
+    color: var(--color-ink-inverted);
+  }
+
+  .bg-cosmic-veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transform: scale(1.08);
+    animation: bg-veil-arrive 720ms var(--ease-out-soft) forwards;
+  }
+
+  .bg-coming-soon {
+    padding: 14px 26px;
+    border-radius: 10px;
+    background: rgba(234, 230, 219, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(234, 230, 219, 0.22);
+    backdrop-filter: blur(12px) saturate(1.05);
+    -webkit-backdrop-filter: blur(12px) saturate(1.05);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-starlight, #d8dde8);
+    opacity: 0;
+    animation: bg-content-arrive 560ms var(--ease-out-soft) 280ms forwards;
+  }
+
+  @keyframes bg-veil-arrive {
+    from { opacity: 0; transform: scale(1.08); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes bg-content-arrive {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg-cosmic-veil,
+    .bg-coming-soon {
+      animation: none;
+    }
+    .bg-cosmic-veil { opacity: 1; transform: none; }
+    .bg-coming-soon { opacity: 1; transform: none; }
+  }
+</style>

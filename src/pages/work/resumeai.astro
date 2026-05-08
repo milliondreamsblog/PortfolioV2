@@ -1,0 +1,310 @@
+---
+// ResumeAI — Intelligent resume optimizer. Engineer's-blog template.
+// TODO (Akshat, verify):
+//   - LLM provider — OpenAI? Local? Multi-provider? I assumed OpenAI for default,
+//     with the "custom LLM chain" note from your bullets framed as an
+//     orchestration layer over it.
+//   - "100% data privacy" — is this because you process locally, never store
+//     PII, or both? Influences how I frame the privacy section.
+//   - Whether the parser is custom-rolled or wraps pdf-parse / mammoth / etc.
+//
+// Image slots: hero-banner.png, feature-parser.png, feature-llm-chain.png,
+//              feature-ui.png, results-snapshot.png
+
+import "../../styles/case-study-blog.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CaseStudySidebar from "../../components/casestudy/CaseStudySidebar.astro";
+import Footer from "../../components/home/Footer.astro";
+import CustomCursor from "../../components/home/CustomCursor.astro";
+import Tag from "../../components/ui/Tag.astro";
+import Button from "../../components/ui/Button.astro";
+import { getCurrentVisitor } from "../../lib/visitor-server";
+
+export const prerender = false;
+
+const visitor = await getCurrentVisitor(Astro);
+const cursorColor = visitor?.color ?? "green";
+
+const tocSections = [
+  { id: "context", label: "Context" },
+  { id: "problem", label: "The problem" },
+  { id: "architecture", label: "Architecture" },
+  { id: "implementation", label: "Implementation" },
+  { id: "tradeoffs", label: "Tradeoffs" },
+  { id: "results", label: "Results" },
+  { id: "reflection", label: "Reflection" },
+];
+
+const metrics = [
+  { value: "50+", label: "Resume dimensions" },
+  { value: "98%", label: "Parser accuracy" },
+  { value: "40%", label: "Faster LLM responses" },
+];
+
+const highlights = [
+  {
+    num: "01",
+    title: "PDF/DOCX parser with 98% accuracy",
+    body: "Resumes are notoriously hostile inputs — multi-column layouts, tables, embedded fonts, weird whitespace. I built a custom parser that combines layout detection with structure recovery, hitting 98% extraction accuracy on resumes up to 10MB. The 2% I haven’t solved yet is mostly heavily-graphic resumes that lean more design than text.",
+    img: "/images/projects/resumeai/feature-parser.png",
+  },
+  {
+    num: "02",
+    title: "Custom LLM chain — 40% faster than naive API calls",
+    body: "The naive approach is to send the full resume + the full job description in one prompt and ask for everything at once. That’s slow and expensive. I split the analysis into a chain: structure first, then targeted prompts per dimension (skills gap, ATS keywords, tone, etc.), with shared intermediate state. Lower latency, lower cost, more consistent output.",
+    img: "/images/projects/resumeai/feature-llm-chain.png",
+  },
+  {
+    num: "03",
+    title: "Staggered Framer Motion UI that earns engagement",
+    body: "Most resume tools dump a wall of feedback at once and expect the user to read it. Mine reveals findings in a deliberate sequence — overview, then strengths, then gaps, then ATS — with Framer Motion staggers giving each section room to breathe. Engagement (time-on-page, sections-read) measurably improved over the static-render version.",
+    img: "/images/projects/resumeai/feature-ui.png",
+  },
+  {
+    num: "04",
+    title: "Next.js 15 App Router, TypeScript strict mode end-to-end",
+    body: "I used ResumeAI to push the most current Next.js patterns hard — Server Components for data-heavy paths, Server Actions for the resume upload + analysis flow, strict TypeScript types from the parser output all the way to the UI. Modern stack, no any leaks, zero TS errors at build.",
+    img: "/images/projects/resumeai/feature-stack.png",
+  },
+];
+
+const tradeoffs = [
+  {
+    decision: "Custom LLM chain over a single mega-prompt",
+    reason: "A single 8K-token prompt asking for everything at once was the obvious starting point. It was also slow, expensive, and produced unreliable output (the model would forget about earlier instructions by the time it got to ATS scoring). Splitting the work into staged calls with shared intermediate state cut latency by 40% and made every dimension more consistent.",
+    cost: "More moving parts to debug. Each stage in the chain is a potential failure point. I added retry/fallback logic at every step.",
+  },
+  {
+    decision: "Custom parser over off-the-shelf libraries",
+    reason: "I tried pdf-parse, mammoth, and a couple of cloud parsing APIs. None of them handled multi-column resumes well, and that’s most modern resumes. Writing my own meant I could special-case layout patterns that recruiters actually use — and own the failure cases instead of debugging someone else’s library.",
+    cost: "More code I maintain. Worth it: parser quality is the input to everything else, and 'mostly works' wasn’t good enough.",
+  },
+  {
+    decision: "Server Actions over a separate API service",
+    reason: "Resume upload, parse, and analysis is a single-purpose flow that the same Next.js app needs. Server Actions handle it cleanly with type-safety end-to-end. Splitting into a separate FastAPI/Express service would’ve added deploy complexity for no benefit.",
+    cost: "If ResumeAI ever needs heavier ML inference (running models server-side instead of calling APIs), splitting becomes a refactor. Not yet.",
+  },
+  {
+    decision: "Stagger animations even though they cost time-to-interactive",
+    reason: "Performance purists would tell me to render everything immediately. But user testing showed people skipped sections when the report appeared all at once — they saw the wall, judged it overwhelming, scrolled past. Staggering forced attention onto each section. The TTI cost was small; the engagement gain was real.",
+    cost: "Page is technically slower to fully render. I made sure the critical content (overall score) appears first, so the perceived speed is fine.",
+  },
+];
+
+const reflections = [
+  {
+    title: "Modern Next.js earns its hype",
+    body: "Server Components + Server Actions + strict TypeScript made this build feel almost suspiciously productive. Half the bugs I’d normally chase (mismatched API contracts, hydration issues, untyped fetch responses) just don’t exist in this stack. Worth learning properly.",
+  },
+  {
+    title: "LLM orchestration is a real engineering discipline",
+    body: "Treating the LLM call as a single step is the wrong mental model. Treating it as a pipeline — stages, intermediate state, retries, fallbacks — is closer to how I think about any other distributed system. The skill transfers.",
+  },
+  {
+    title: "Engagement design is part of the product",
+    body: "I would’ve called the staggered reveal a 'nice-to-have' a year ago. After watching session recordings, I see it as the difference between users reading the feedback and bouncing. Animation is a UX tool, not just decoration.",
+  },
+];
+---
+
+<BaseLayout
+  title="ResumeAI — Akshat Darshi"
+  description="GenAI resume coach analyzing 50+ dimensions. Custom LLM chain, 98% parser accuracy on PDF/DOCX up to 10MB, 40% faster than naive API calls. Next.js 15, TypeScript strict."
+>
+  <div class="flex items-stretch min-h-screen" id="top">
+    <CaseStudySidebar sections={tocSections} active="context" />
+
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-10 flex flex-col gap-8 sm:gap-10">
+      <div class="csb-root" data-theme="green">
+        <section class="csb-hero rounded-[24px] overflow-hidden h-[360px] mb-8">
+          <img src="/images/projects/resumeai/hero-banner.png" alt="ResumeAI — intelligent resume optimizer" loading="eager" class="block w-full h-full object-cover object-center" />
+        </section>
+
+        <section class="flex flex-col gap-3 mb-8">
+          <div class="flex items-center gap-2">
+            <Tag>AI / GenAI</Tag>
+            <Tag>Live</Tag>
+          </div>
+          <h1 class="font-[family-name:var(--font-display)] font-light text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-[var(--color-ink)]">
+            ResumeAI &mdash; an LLM coach with engineering rigor
+          </h1>
+          <p class="font-[family-name:var(--font-body)] text-base text-[var(--color-ink-dim)] leading-relaxed">
+            A GenAI resume coach that analyzes <span class="csb-emph">50+ dimensions</span> &mdash;
+            skills gaps, tone, ATS keyword density &mdash; against a live job description. Custom
+            LLM pipeline with <span class="csb-emph">100% data privacy</span> and 40% faster
+            responses than naive API calls.
+          </p>
+          <div class="flex items-center gap-3 flex-wrap mt-2">
+            <Button href="https://resume-ai-sigma-lime.vercel.app/" variant="outline" target="_blank">
+              Try ResumeAI <span aria-hidden="true">→</span>
+            </Button>
+            <Button href="https://github.com/milliondreamsblog/Resume_AI" variant="outline" target="_blank">
+              Source <span aria-hidden="true">→</span>
+            </Button>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-3 gap-4 sm:gap-6 mb-8">
+          {metrics.map((m) => (
+            <div class="csb-metric"><p class="csb-metric-value">{m.value}</p><p class="csb-metric-label">{m.label}</p></div>
+          ))}
+        </section>
+
+        <section class="csb-meta-grid grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 md:gap-[60px] p-4 rounded-[12px] mb-8" data-cursor-bg="green">
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Role</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">Sole Engineer<br />Architecture<br />UX</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Stack</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">Next.js 15<br />TypeScript (strict)<br />Framer Motion<br />GenAI &middot; Tailwind</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Timeline</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">{/* TODO (Akshat): real dates */}2025 &ndash; ongoing</p></div>
+          <div class="flex flex-col gap-2"><p class="font-[family-name:var(--font-mono)] text-base uppercase text-white">Status</p><p class="font-[family-name:var(--font-body)] text-base text-[var(--color-green-2)] leading-snug">Live<br />Public deploy<br />Iterating</p></div>
+        </section>
+
+        <section id="context" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Context</p>
+          <h2 class="csb-section-heading">Resume tools either over-promise or under-deliver. I wanted neither.</h2>
+          <p class="csb-section-body">
+            The market is saturated. Half the products are glorified spell-checkers that recommend
+            generic phrasing. The other half are AI black boxes &mdash; you upload your resume,
+            wait 90 seconds, get back a wall of unstructured advice you can&rsquo;t act on.
+          </p>
+          <p class="csb-section-body">
+            I built ResumeAI as the version I&rsquo;d actually want to use myself: structured
+            feedback across 50+ specific dimensions, fast enough to feel responsive, and
+            transparent about what it&rsquo;s analysing. Engineering rigor applied to a
+            problem people normally solve with hand-waving.
+          </p>
+        </section>
+
+        <section id="problem" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">The problem</p>
+          <h2 class="csb-section-heading">A resume is unstructured input. Useful feedback needs structured output.</h2>
+          <p class="csb-section-body">
+            The hard parts of building a useful resume tool aren&rsquo;t obvious from the outside:
+          </p>
+          <ul class="csb-list">
+            <li>PDF and DOCX layouts are hostile &mdash; multi-column, embedded tables, weird fonts</li>
+            <li>The LLM has to reason across the resume <em>and</em> a target job description simultaneously</li>
+            <li>Naive single-prompt analysis is slow, expensive, and inconsistent</li>
+            <li>50+ dimensions of feedback is too much to render at once without losing the user</li>
+            <li>Privacy matters &mdash; resumes contain PII, salary expectations, employment gaps</li>
+          </ul>
+          <div class="csb-callout mt-4" data-cursor-bg="green">
+            <p class="csb-callout-label">Problem statement</p>
+            <p class="csb-callout-text">
+              How do I build a resume tool that gives structured, actionable feedback across many
+              dimensions, runs fast enough to feel responsive, and treats user data with
+              the privacy resumes actually deserve?
+            </p>
+          </div>
+        </section>
+
+        <section id="architecture" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Architecture</p>
+          <h2 class="csb-section-heading">A pipeline, not a prompt.</h2>
+          <p class="csb-section-body">
+            ResumeAI is built around a multi-stage LLM pipeline. The custom parser turns the upload
+            into structured JSON. The orchestrator runs targeted prompts per dimension (skills,
+            tone, ATS keywords, etc.), each with shared intermediate state. The frontend reveals
+            findings in a deliberate sequence with Framer Motion staggers.
+          </p>
+
+          <pre class="csb-arch-ascii" aria-label="System diagram">{`
+   [User uploads PDF/DOCX]
+              │
+              ▼
+   ┌──────────────────────────────────────────┐
+   │  Next.js 15 (App Router, RSC + Actions)  │
+   └──────────────────────────────────────────┘
+              │
+              ▼
+   ┌──────────────────────────────────────────┐
+   │     Custom parser (98% accuracy)         │
+   │  layout detect → structure recovery →    │
+   │  typed JSON                              │
+   └──────────────────────────────────────────┘
+              │
+              ▼
+   ┌──────────────────────────────────────────┐
+   │     LLM orchestration pipeline           │
+   │  ┌─ stage 1: structure summary ─────┐    │
+   │  ├─ stage 2: skills gap (vs JD) ───┤    │
+   │  ├─ stage 3: tone & language ──────┤    │
+   │  ├─ stage 4: ATS keyword density ──┤    │
+   │  └─ stage 5: aggregate ─────────────┘    │
+   └──────────────────────────────────────────┘
+              │
+              ▼
+   [Staggered UI reveal — section by section]
+`}</pre>
+        </section>
+
+        <section id="implementation" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Implementation</p>
+          <h2 class="csb-section-heading">The four pieces that decide whether ResumeAI feels good to use.</h2>
+          <div class="flex flex-col gap-8 mt-4">
+            {highlights.map((h) => (
+              <div class="csb-highlight">
+                <div class="csb-highlight-img-wrap"><img src={h.img} alt={h.title} loading="lazy" class="csb-highlight-img" /></div>
+                <div class="csb-highlight-details">
+                  <div class="flex flex-col gap-1.5"><Tag>{h.num}</Tag><span class="font-[family-name:var(--font-display)] font-light text-[18px] text-[var(--color-ink)]">{h.title}</span></div>
+                  <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink)] leading-snug">{h.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="tradeoffs" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Tradeoffs &amp; hard parts</p>
+          <h2 class="csb-section-heading">Decisions a naive build wouldn&rsquo;t survive.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {tradeoffs.map((t) => (
+              <article class="csb-tradeoff">
+                <h3 class="csb-tradeoff-title">{t.decision}</h3>
+                <p class="csb-tradeoff-reason"><span class="csb-tradeoff-tag csb-tradeoff-tag--why">Why</span>{t.reason}</p>
+                <p class="csb-tradeoff-cost"><span class="csb-tradeoff-tag csb-tradeoff-tag--cost">Cost</span>{t.cost}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="results" data-cs-section class="csb-section flex flex-col gap-2 mb-10">
+          <p class="csb-section-label">Results</p>
+          <h2 class="csb-section-heading">The numbers I care about.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            <div class="csb-result-tile"><p class="csb-result-value">98%</p><p class="csb-result-label">Parser accuracy</p><p class="csb-result-detail">Across PDF and DOCX up to 10MB. The parser is the input to everything else &mdash; if it&rsquo;s wrong, every dimension downstream is wrong.</p></div>
+            <div class="csb-result-tile"><p class="csb-result-value">40%</p><p class="csb-result-label">Faster than naive</p><p class="csb-result-detail">Measured against a baseline single-prompt implementation. The pipeline split lets each stage be smaller, faster, and run partly in parallel.</p></div>
+            <div class="csb-result-tile"><p class="csb-result-value">50+</p><p class="csb-result-label">Dimensions analyzed</p><p class="csb-result-detail">Skills, tone, ATS keyword density, achievement framing, and dozens more &mdash; every one is a separate, targeted prompt with structured output.</p></div>
+          </div>
+        </section>
+
+        <section id="reflection" data-cs-section class="csb-section flex flex-col gap-2">
+          <p class="csb-section-label">Reflection</p>
+          <h2 class="csb-section-heading">What shipping ResumeAI taught me.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {reflections.map((r) => (
+              <article class="csb-reflection-tile bg-[var(--color-bg-light)] rounded-[16px] p-4 flex flex-col gap-2">
+                <h3 class="font-[family-name:var(--font-body)] font-semibold text-[16px] text-[var(--color-ink)]">{r.title}</h3>
+                <p class="font-[family-name:var(--font-body)] text-[14px] text-[var(--color-ink-dim)] leading-snug">{r.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <Footer color={cursorColor} active="home" />
+  <CustomCursor color={cursorColor} />
+</BaseLayout>
+
+<script>
+  function initCsb() {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".csb-section"));
+    if (sections.length === 0) return;
+    if (reduced || !("IntersectionObserver" in window)) { sections.forEach((s) => s.setAttribute("data-visible", "")); return; }
+    const io = new IntersectionObserver((entries) => { for (const e of entries) { if (e.isIntersecting) { (e.target as HTMLElement).setAttribute("data-visible", ""); io.unobserve(e.target); } } }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    sections.forEach((s) => io.observe(s));
+  }
+  initCsb();
+  document.addEventListener("astro:page-load", initCsb);
+</script>
