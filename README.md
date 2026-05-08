@@ -97,9 +97,7 @@ Out of the box, the site ships with:
 
 The `og.png` (1200×630) is the share-card preview that unfurls on Slack, LinkedIn, Twitter, etc.
 
-## Credits
 
-This portfolio is built on a structure originally created by **[Megan Yap](https://meganyap.me)** ([github.com/megany128/portfolio](https://github.com/megany128/portfolio)) — the visitor card system, animation primitives, and design tokens are adapted from her excellent work. The 8 engineer-blog case studies, the project content, and the personal sections are mine.
 
 ## License
 
