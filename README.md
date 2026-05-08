@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://milliondreams.vercel.app">
-    <img src="public/og.png" alt="Akshat Darshi — Software Engineer" />
+    <img src="public/og.png?v=2" alt="Akshat Darshi — Software Engineer" />
   </a>
 </p>
 
